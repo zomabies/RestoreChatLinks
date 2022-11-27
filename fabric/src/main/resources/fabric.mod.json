@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "restorechatlinks",
+  "version": "${version}",
+  "name": "Restore chat links",
+  "description": "Make web links clickable in chat",
+  "authors": [
+    "Zomabies"
+  ],
+  "contact": {
+    "sources": "https://github.com/zomabies/RestoreChatLink/"
+  },
+  "license": "LGPL-2.0-only",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "restorechatlinks.fabric.RestoreChatLinksFabric"
+    ]
+  },
+  "mixins": [
+    "restorechatlinks.mixins.json",
+    "restorechatlinks-common.mixins.json"
+  ],
+  "depends": {
+    "minecraft": ">=1.19.2"
+  }
+}

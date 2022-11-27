@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "restorechatlinks.mixin.fabric",
+  "compatibilityLevel": "JAVA_17",
+  "minVersion": "0.8.0",
+  "client": [
+  ],
+  "mixins": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
