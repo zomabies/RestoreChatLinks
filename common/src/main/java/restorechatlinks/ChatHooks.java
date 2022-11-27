@@ -10,17 +10,20 @@ public class ChatHooks {
 
     public static void onSystemMessage(ClientGameChatEvent event) {
 
-        final TextContent systemMessage = event.getMessage().getContent();
+        final Text message = event.getMessage();
+        final TextContent textContent = message.getContent();
 
-        if (systemMessage instanceof LiteralTextContent literalString) {
-            Text withClickEvent = ChatLink.newChatWithLinks(literalString.string());
+        if (textContent instanceof LiteralTextContent literalString) {
+            MutableText withClickEvent = ((MutableText) ChatLink.newChatWithLinks(literalString.string()));
+            withClickEvent.setStyle(message.getStyle());
             event.setMessage(withClickEvent);
             return;
         }
 
-        if (systemMessage instanceof TranslatableTextContent translatableText
+        if (textContent instanceof TranslatableTextContent translatableText
                 && translatableText.getKey().equals("chat.type.text")) {
-            final MutableText modified = MutableText.of(translatableText);
+
+            final MutableText modified = MutableText.of(translatableText).setStyle(message.getStyle());
             final Object[] args = translatableText.getArgs();
             Text txt = ((Text) args[1]);
             args[1] = ChatLink.newChatWithLinks(txt.getString());
