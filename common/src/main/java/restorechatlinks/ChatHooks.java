@@ -26,7 +26,7 @@ public class ChatHooks {
             final MutableText modified = MutableText.of(translatableText).setStyle(message.getStyle());
             final Object[] args = translatableText.getArgs();
             Text txt = ((Text) args[1]);
-            args[1] = ChatLink.newChatWithLinks(txt.getString());
+            args[1] = ((MutableText) ChatLink.newChatWithLinks(txt.getString())).setStyle(txt.getStyle());
             event.setMessage(modified);
         }
 
