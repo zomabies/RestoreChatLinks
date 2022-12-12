@@ -2,9 +2,13 @@ package restorechatlinks;
 
 import net.minecraft.text.LiteralTextContent;
 import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextContent;
 import net.minecraft.text.TranslatableTextContent;
+
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ChatHooks {
 
@@ -13,10 +17,19 @@ public class ChatHooks {
         final Text message = event.getMessage();
         final TextContent textContent = message.getContent();
 
-        if (textContent instanceof LiteralTextContent literalString) {
-            MutableText withClickEvent = ((MutableText) ChatLink.newChatWithLinks(literalString.string()));
-            withClickEvent.setStyle(message.getStyle());
-            event.setMessage(withClickEvent);
+        if (textContent instanceof LiteralTextContent) {
+
+            AtomicReference<MutableText> modifiedText = new AtomicReference<>();
+            message.visit((style, asString) -> {
+                if (modifiedText.get() == null) {
+                    modifiedText.set(((MutableText) ChatLink.newChatWithLinks(asString)).setStyle(style));
+                } else {
+                    modifiedText.get().append(((MutableText) ChatLink.newChatWithLinks(asString)).setStyle(style));
+                }
+                return Optional.empty();
+            }, Style.EMPTY);
+            modifiedText.get().setStyle(message.getStyle());
+            event.setMessage(modifiedText.get());
             return;
         }
 
