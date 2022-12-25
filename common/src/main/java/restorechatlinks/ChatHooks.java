@@ -7,10 +7,16 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TextContent;
 import net.minecraft.text.TranslatableTextContent;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ChatHooks {
+
+    private static final HashSet<String> CHAT_TRANSLATION_TYPE = new HashSet<>(
+            List.of("chat.type.announcement", "chat.type.text")
+    );
 
     public static void onSystemMessage(ClientGameChatEvent event) {
 
@@ -34,7 +40,7 @@ public class ChatHooks {
         }
 
         if (textContent instanceof TranslatableTextContent translatableText
-                && translatableText.getKey().equals("chat.type.text")) {
+                && CHAT_TRANSLATION_TYPE.contains(translatableText.getKey())) {
 
             final MutableText modified = MutableText.of(translatableText).setStyle(message.getStyle());
             final Object[] args = translatableText.getArgs();
