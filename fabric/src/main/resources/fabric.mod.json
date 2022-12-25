@@ -8,7 +8,8 @@
     "Zomabies"
   ],
   "contact": {
-    "sources": "https://github.com/zomabies/RestoreChatLink/"
+    "sources": "https://github.com/zomabies/RestoreChatLink/",
+    "homepage": "https://modrinth.com/mod/restore-chat-links"
   },
   "license": "LGPL-2.0-only",
   "environment": "client",
@@ -22,6 +23,7 @@
     "restorechatlinks-common.mixins.json"
   ],
   "depends": {
-    "minecraft": ">=1.19.2"
+    "minecraft": ">=1.19.2",
+    "forgeconfigapiport" : "*"
   }
 }

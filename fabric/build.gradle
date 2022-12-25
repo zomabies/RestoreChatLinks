@@ -20,11 +20,29 @@ configurations {
     developmentFabric.extendsFrom common
 }
 
+
+repositories {
+    maven {
+        name = "Fuzs Mod Resources"
+        url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/"
+    }
+    maven { url "https://maven.terraformersmc.com/releases/" }
+    maven {
+        name = 'Curse Maven'
+        url = 'https://cursemaven.com'
+    }
+}
+
 dependencies {
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    // modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
     // Remove the next line if you don't want to depend on the API
     // modApi "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
+
+    modImplementation "net.minecraftforge:forgeconfigapiport-fabric:4.2.9"
+
+    modImplementation "curse.maven:configured-fabric-667378:4010582"
+    modRuntimeOnly "com.terraformersmc:modmenu:4.1.2"
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }

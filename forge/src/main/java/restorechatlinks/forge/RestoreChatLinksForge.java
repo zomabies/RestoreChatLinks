@@ -7,11 +7,15 @@ import net.minecraft.text.TranslatableTextContent;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import restorechatlinks.ChatLink;
 import restorechatlinks.RestoreChatLinks;
+import restorechatlinks.forge.config.Config;
 
 @Mod(RestoreChatLinks.MOD_ID)
 public class RestoreChatLinksForge {
@@ -20,12 +24,25 @@ public class RestoreChatLinksForge {
         //EventBuses.registerModEventBus(RestoreChatLinks.MOD_ID, FMLJavaModLoadingContext.get().getModEventBus());
         RestoreChatLinks.init();
         FMLJavaModLoadingContext.get().getModEventBus().addListener(EventPriority.HIGH, this::onClientEvent);
+
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, Config.clientSpec);
+
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onConfigLoad);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onConfigChange);
+
     }
 
     private void onClientEvent(FMLClientSetupEvent event) {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, this::onChatReceived);
     }
 
+    private void onConfigLoad(ModConfigEvent.Loading event) {
+        Config.reloadConfig();
+    }
+
+    private void onConfigChange(ModConfigEvent.Reloading event) {
+        Config.reloadConfig();
+    }
 
     private void onChatReceived(ClientChatReceivedEvent chat) {
 

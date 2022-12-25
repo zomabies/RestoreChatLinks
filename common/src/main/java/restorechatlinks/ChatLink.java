@@ -10,9 +10,11 @@ package restorechatlinks;
 
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
 import net.minecraft.util.Formatting;
+import restorechatlinks.config.RCLConfig;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -76,11 +78,15 @@ public class ChatLink {
             }
             // Set the click event and append the link.
             ClickEvent click = new ClickEvent(ClickEvent.Action.OPEN_URL, url);
-            if (color) {
-                link.setStyle(link.getStyle().withClickEvent(click).withUnderline(true).withColor(TextColor.fromFormatting(Formatting.BLUE)));
-            } else {
-                link.setStyle(link.getStyle().withClickEvent(click));
+            Style style = link.getStyle().withClickEvent(click);
+
+            if (RCLConfig.underlineLink) {
+                style = style.withUnderline(true);
             }
+            if (RCLConfig.colorLink) {
+                style = style.withColor(TextColor.fromFormatting(Formatting.byName(RCLConfig.colorName)));
+            }
+            link.setStyle(style);
             if (ichat == null)
                 ichat = Text.literal("");
             ichat.append(link);
