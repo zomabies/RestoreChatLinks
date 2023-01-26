@@ -3,9 +3,7 @@
   "package": "restorechatlinks.fabric.mixin",
   "compatibilityLevel": "JAVA_17",
   "minVersion": "0.8.0",
-  "plugin": "restorechatlinks.fabric.mixin.RCLMixinPlugin",
   "client": [
-    "MixinForgeValueConfigApiPort"
   ],
   "mixins": [
   ],
