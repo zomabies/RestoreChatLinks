@@ -40,7 +40,7 @@ public class MixinMessageHandler {
 
 
     @ModifyVariable(
-            method = "Lnet/minecraft/client/network/message/MessageHandler;processProfilelessMessage(Lnet/minecraft/network/message/MessageType$Parameters;Lnet/minecraft/network/message/SignedMessage;Lnet/minecraft/text/Text;)Z",
+            method = "Lnet/minecraft/client/network/message/MessageHandler;onProfilelessMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageType$Parameters;)V",
             at = @At("HEAD"),
             argsOnly = true
     )
@@ -51,14 +51,13 @@ public class MixinMessageHandler {
     }
 
     @Inject(
-            method = "Lnet/minecraft/client/network/message/MessageHandler;processProfilelessMessage(Lnet/minecraft/network/message/MessageType$Parameters;Lnet/minecraft/network/message/SignedMessage;Lnet/minecraft/text/Text;)Z",
+            method = "Lnet/minecraft/client/network/message/MessageHandler;onProfilelessMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageType$Parameters;)V",
             at = @At("HEAD"),
             cancellable = true
     )
-    private void rcl$cancel_profilelessMessage(MessageType.Parameters params, SignedMessage message, Text decorated, CallbackInfoReturnable<Boolean> cir) {
+    private void rcl$cancel_profilelessMessage(Text message, MessageType.Parameters params, CallbackInfo ci) {
         if (message == null) {
-            cir.setReturnValue(true);
-            cir.cancel();
+            ci.cancel();
         }
     }
 }
