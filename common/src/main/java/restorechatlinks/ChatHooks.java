@@ -43,9 +43,16 @@ public class ChatHooks {
                 && CHAT_TRANSLATION_TYPE.contains(translatableText.getKey())) {
 
             final MutableText modified = MutableText.of(translatableText).setStyle(message.getStyle());
+            modified.getSiblings().addAll(message.getSiblings());
             final Object[] args = translatableText.getArgs();
-            Text txt = ((Text) args[1]);
-            args[1] = ((MutableText) ChatLink.newChatWithLinks(txt.getString())).setStyle(txt.getStyle());
+            for (int i = 0; i < args.length; i++) {
+                if (args[i] instanceof Text txt) {
+                    args[i] = ((MutableText) ChatLink.newChatWithLinks(txt.getString())).setStyle(txt.getStyle());
+                }
+                if (args[i] instanceof String str) {
+                    args[i] = ChatLink.newChatWithLinks(str);
+                }
+            }
             event.setMessage(modified);
         }
 
