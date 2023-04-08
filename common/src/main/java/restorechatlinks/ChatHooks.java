@@ -19,8 +19,12 @@ public class ChatHooks {
     );
 
     public static void onSystemMessage(ClientGameChatEvent event) {
+        Text text = processMessage(event.getMessage());
+        event.setMessage(text);
+    }
 
-        final Text message = event.getMessage();
+    public static Text processMessage(Text message) {
+
         final TextContent textContent = message.getContent();
 
         if (textContent instanceof LiteralTextContent) {
@@ -35,8 +39,7 @@ public class ChatHooks {
                 return Optional.empty();
             }, Style.EMPTY);
             modifiedText.get().setStyle(message.getStyle());
-            event.setMessage(modifiedText.get());
-            return;
+            return modifiedText.get();
         }
 
         if (textContent instanceof TranslatableTextContent translatableText
@@ -46,9 +49,10 @@ public class ChatHooks {
             final Object[] args = translatableText.getArgs();
             Text txt = ((Text) args[1]);
             args[1] = ((MutableText) ChatLink.newChatWithLinks(txt.getString())).setStyle(txt.getStyle());
-            event.setMessage(modified);
+            return (modified);
         }
 
+        return message;
     }
 
 }

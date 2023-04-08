@@ -13,6 +13,7 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import restorechatlinks.ChatHooks;
 import restorechatlinks.ChatLink;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.forge.config.Config;
@@ -33,7 +34,9 @@ public class RestoreChatLinksForge {
     }
 
     private void onClientEvent(FMLClientSetupEvent event) {
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, this::onChatReceived);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, this::onChatReceived);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, this::onSystemChatReceived);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, this::onPlayerChatReceived);
     }
 
     private void onConfigLoad(ModConfigEvent.Loading event) {
@@ -45,7 +48,18 @@ public class RestoreChatLinksForge {
     }
 
     private void onChatReceived(ClientChatReceivedEvent chat) {
+        if (chat.isSystem() && !(chat instanceof ClientChatReceivedEvent.System)) {
+            // Profiless message
+            System.out.println(chat.getClass().getName());
+            chat.setMessage(ChatHooks.processMessage(chat.getMessage()));
+        }
+    }
 
+    private void onSystemChatReceived(ClientChatReceivedEvent.System chat) {
+        chat.setMessage(ChatHooks.processMessage(chat.getMessage()));
+    }
+
+    private void onPlayerChatReceived(ClientChatReceivedEvent.Player chat) {
         final TextContent text = chat.getMessage().copy().getContent();
         if (text instanceof TranslatableTextContent translatableText) {
             final MutableText modified = MutableText.of(translatableText);
