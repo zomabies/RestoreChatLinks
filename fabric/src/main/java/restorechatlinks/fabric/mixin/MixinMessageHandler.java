@@ -1,18 +1,17 @@
-package restorechatlinks.mixin;
+package restorechatlinks.fabric.mixin;
 
-import restorechatlinks.ChatHooks;
-import restorechatlinks.ClientGameChatEvent;
 import net.minecraft.client.network.message.MessageHandler;
 import net.minecraft.network.message.MessageType;
-import net.minecraft.network.message.SignedMessage;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import restorechatlinks.ChatHooks;
+import restorechatlinks.ClientGameChatEvent;
 
+@Deprecated(since = "1.19.3", forRemoval = true)
 @Mixin(value = MessageHandler.class)
 public class MixinMessageHandler {
 
