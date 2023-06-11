@@ -66,7 +66,7 @@ shadowJar {
 
 remapJar {
     injectAccessWidener = true
-    input.set shadowJar.archiveFile
+    inputFile.set shadowJar.archiveFile
     dependsOn shadowJar
     classifier null
 }
@@ -89,6 +89,62 @@ sourcesJar {
     def commonSources = project(":common").sourcesJar
     dependsOn commonSources
     from commonSources.archiveFile.map { zipTree(it) }
+}
+
+def hasSigning = project.hasProperty('keyStore')
+        && project.hasProperty('keyStoreAlias')
+        && project.findProperty('keyStorePass')
+        && project.findProperty('keyStoreType')
+
+// continue from main gradle file https://stackoverflow.com/a/54094378
+if (hasSigning) {
+    compileJava {
+        source = processSource.outputs
+    }
+}
+
+// https://github.com/Darkhax-Minecraft/Minecraft-Modding-Template/blob/forge-1.16.5/gradle/forge.gradle
+task signJar(type: SignJar, dependsOn: jar) {
+
+    onlyIf {
+        hasSigning
+    }
+
+    if (hasSigning) {
+
+        keyStore = project.findProperty('keyStore')
+        alias = project.findProperty('keyStoreAlias')
+        storePass = project.findProperty('keyStorePass')
+        keyPass = project.findProperty('keyStorePass')
+        storeType = project.findProperty('keyStoreType')
+        sigFile = 'RCL'
+
+        inputFile = remapJar.archiveFile
+        outputFile = remapJar.archiveFile
+        refTimeStampFile = 'fabric.mod.json'
+
+        // hash algorithm
+        digestAlg = 'SHA-256'
+        sigAlg = 'EdDSA'
+
+        // timestamping
+        if (project.hasProperty('tsa') && !project.gradle.startParameter.offline) {
+            //noinspection HttpUrlsUsage
+            tsa = 'http://timestamp.sectigo.com?td=sha256'
+            tsaDigestAlg = 'SHA-256'
+        }
+
+        //verbose = 'all'
+        //signedFileName = "${remapJar.archiveFileName.get()}-signed.jar"
+        //exclude('META-INF/mods.toml')
+
+        project.logger.debug('Configured Jar signing for this build');
+
+        build.dependsOn signJar
+
+    } else {
+        project.logger.warn('Skipped Jar signing. No keyStore property could be found')
+    }
 }
 
 components.java {

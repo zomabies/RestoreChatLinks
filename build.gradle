@@ -11,6 +11,7 @@ buildscript {
         classpath group: 'dev.architectury', name: 'architectury-loom', version: '1.0-SNAPSHOT', changing: true
     }
 }
+import org.apache.tools.ant.filters.ReplaceTokens
 apply plugin: 'architectury-plugin'
 
 architectury {
@@ -63,5 +64,14 @@ allprojects {
 
     java {
         withSourcesJar()
+    }
+
+    // https://stackoverflow.com/a/54094378
+    task processSource(type: Sync) {
+        from sourceSets.main.java
+        if (project.hasProperty('keyStore')) {
+            filter(ReplaceTokens, tokens: [signature: project.findProperty('signSHA256')])
+        }
+        into "$buildDir/src"
     }
 }
