@@ -7,6 +7,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.VersionParsingException;
+import net.fabricmc.loader.api.metadata.ModOrigin;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.report.log.ChatLog;
 import net.minecraft.client.report.log.ReceivedMessage;
@@ -20,15 +21,33 @@ import restorechatlinks.ChatHooks;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.fabric.mixin.RCLMixinPlugin;
 
+import java.io.File;
 import java.time.Instant;
 
 public class RestoreChatLinksFabric implements ModInitializer {
+
+    public static final String MOD_SIGNATURE = "@signature@";
+    public static final boolean IS_SIGNED = !MOD_SIGNATURE.replace('@', '\0').contains("signature");
 
     private static MinecraftClient client = null;
     private static final Logger LOGGER = LogManager.getLogger(RestoreChatLinksFabric.class);
 
     @Override
     public void onInitialize() {
+        if (!FabricLoader.getInstance().isDevelopmentEnvironment() && IS_SIGNED) {
+            ModContainer container = FabricLoader.getInstance().getModContainer(RestoreChatLinks.MOD_ID).orElse(null);
+            if (container != null) {
+                final ModOrigin origin = container.getOrigin();
+                if (origin.getKind() == ModOrigin.Kind.PATH) {
+                    final File modFile = origin.getPaths().get(0).toFile();
+                    boolean isValid = RestoreChatLinks.validJarSignature(modFile);
+                    if (!isValid && IS_SIGNED) {
+                        throw new SecurityException("Jar file is modified : " + modFile);
+                    }
+                }
+            }
+        }
+
         RestoreChatLinks.init();
 
         if (FabricLoader.getInstance().isModLoaded("forgeconfigapiport")) {
@@ -99,4 +118,19 @@ public class RestoreChatLinksFabric implements ModInitializer {
         return false;
     }
 
+    static {
+        if (!FabricLoader.getInstance().isDevelopmentEnvironment() && IS_SIGNED) {
+            ModContainer container = FabricLoader.getInstance().getModContainer(RestoreChatLinks.MOD_ID).orElse(null);
+            if (container != null) {
+                final ModOrigin origin = container.getOrigin();
+                if (origin.getKind() == ModOrigin.Kind.PATH) {
+                    final File modFile = origin.getPaths().get(0).toFile();
+                    boolean isValid = RestoreChatLinks.validJarSignature(modFile);
+                    if (!isValid && IS_SIGNED) {
+                        throw new SecurityException("Jar file is modified : " + modFile);
+                    }
+                }
+            }
+        }
+    }
 }
