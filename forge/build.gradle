@@ -15,8 +15,8 @@ loom {
         //convertAccessWideners = true
         //extraAccessWideners.add loom.accessWidenerPath.get().asFile.name
 
-        mixinConfig "restorechatlinks-common.mixins.json"
-        mixinConfig "restorechatlinks.mixins.json"
+        //mixinConfig "restorechatlinks-common.mixins.json"
+        //mixinConfig "restorechatlinks.mixins.json"
     }
 
     runs {
