@@ -23,6 +23,7 @@ public class Config {
         public static ForgeConfigSpec.BooleanValue underlineLink;
         public static ForgeConfigSpec.BooleanValue colorLink;
         public static ForgeConfigSpec.ConfigValue<String> colorName;
+        public static ForgeConfigSpec.BooleanValue debugMessage;
 
         Client(ForgeConfigSpec.Builder builder) {
             builder.comment("General configuration settings").push("client");
@@ -42,6 +43,10 @@ public class Config {
                     .comment("Color of the link", "Valid colors: ", String.join(", ", colorNames))
                     .defineInList("colorName", Formatting.BLUE.getName(), colorNames);
 
+            debugMessage = builder
+                    .comment("Show raw message for debugging")
+                    .define("debugMessage", false);
+
             builder.pop();
         }
     }
@@ -50,6 +55,7 @@ public class Config {
         RCLConfig.underlineLink = Client.underlineLink.get();
         RCLConfig.colorLink = Client.colorLink.get();
         RCLConfig.colorName = Client.colorName.get();
+        RCLConfig.debugMessage = Client.debugMessage.get();
     }
 
 }
