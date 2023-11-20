@@ -51,9 +51,11 @@ public class RestoreChatLinksForge {
             final MutableText modified = MutableText.of(translatableText);
             final Object[] args = translatableText.getArgs();
             for (int i = 0; i < args.length; i++) {
-                Text txt = ((Text) args[i]);
-                if (txt.getStyle().isEmpty() && !txt.getString().trim().isEmpty()) {
+                if (args[i] instanceof Text txt) {
                     args[i] = ChatLink.newChatWithLinks(txt.getString());
+                }
+                if (args[i] instanceof String str) {
+                    args[i] = ChatLink.newChatWithLinks(str);
                 }
             }
             chat.setMessage(modified);
