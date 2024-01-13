@@ -22,7 +22,10 @@ public class ChatHooks {
     private static final Logger LOGGER = LogManager.getLogger("RCL-DEBUG");
 
     private static final HashSet<String> CHAT_TRANSLATION_TYPE = new HashSet<>(
-            List.of("chat.type.announcement", "chat.type.text")
+            List.of("chat.type.announcement",
+                    "chat.type.text",
+                    "commands.message.display.outgoing",
+                    "commands.message.display.incoming")
     );
 
     public static void onSystemMessage(ClientGameChatEvent event) {
