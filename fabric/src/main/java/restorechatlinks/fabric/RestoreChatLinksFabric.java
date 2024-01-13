@@ -9,11 +9,13 @@ import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.VersionParsingException;
 import net.fabricmc.loader.api.metadata.ModOrigin;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.message.MessageTrustStatus;
 import net.minecraft.client.report.log.ChatLog;
 import net.minecraft.client.report.log.ReceivedMessage;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableTextContent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -91,6 +93,22 @@ public class RestoreChatLinksFabric implements ModInitializer {
             ChatLog chatLog = client.getAbuseReportContext().getChatLog();
             chatLog.add(ReceivedMessage.of(a, instant));
 
+            return false;
+        }
+        // Player message (includes /say)
+        if (gameProfile != null) {
+            if (text.getContent() instanceof final TranslatableTextContent translated) {
+                text = ChatHooks.copyTranslatableText(translated);
+            }
+            text = ChatHooks.processMessage(text);
+            // "emulate" net.minecraft.client.network.message.MessageHandler.processChatMessageInternal
+            // to preserve signing information
+            final MessageTrustStatus status = MessageTrustStatus.getStatus(signedMessage, text, instant);
+            client.inGameHud.getChatHud().addMessage(text, signedMessage.signature(), status.createIndicator(signedMessage));
+            client.getNarratorManager().narrate(parameters.applyNarrationDecoration(signedMessage.getContent()));
+
+            ChatLog chatLog = client.getAbuseReportContext().getChatLog();
+            chatLog.add(ReceivedMessage.of(gameProfile, signedMessage, status));
             return false;
         }
         return true;

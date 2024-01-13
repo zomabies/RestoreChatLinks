@@ -3,7 +3,6 @@ package restorechatlinks.forge;
 import cpw.mods.jarhandling.SecureJar;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TextContent;
 import net.minecraft.text.TranslatableTextContent;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -83,9 +82,10 @@ public class RestoreChatLinksForge {
     }
 
     private void onPlayerChatReceived(ClientChatReceivedEvent.Player chat) {
-        final TextContent text = chat.getMessage().copy().getContent();
-        if (text instanceof TranslatableTextContent translatableText) {
-            final MutableText modified = MutableText.of(translatableText);
+        final Text text = chat.getMessage();
+        if (text.getContent() instanceof TranslatableTextContent translatableText) {
+            final MutableText modified = ChatHooks.copyTranslatableText(translatableText);
+            modified.setStyle(text.getStyle());
             final Object[] args = translatableText.getArgs();
             for (int i = 0; i < args.length; i++) {
                 if (args[i] instanceof Text txt) {

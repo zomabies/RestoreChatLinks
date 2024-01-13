@@ -73,6 +73,16 @@ public class ChatHooks {
         return message;
     }
 
+    /**
+     * Creates a copy without updateTranslations called. Used for multiplayer
+     **/
+    public static MutableText copyTranslatableText(TranslatableTextContent translated){
+        // chat HUD uses cached "translation", build by "TranslatableTextContent#updateTranslation".
+        // MessageHandler#processChatMessageInternal => getStatus => MessageTrustStatus.getStatus (update in multiplayer)
+        // manual editing using getArgs does not update the cache
+        return Text.translatable(translated.getKey(), translated.getArgs());
+    }
+
     private static void logMessage(Supplier<Pair<String, String>> message) {
         if (RCLConfig.debugMessage) {
             Pair<String, String> messagePair = message.get();
