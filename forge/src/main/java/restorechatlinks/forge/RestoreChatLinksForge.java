@@ -74,7 +74,6 @@ public class RestoreChatLinksForge {
     private void onChatReceived(ClientChatReceivedEvent chat) {
         if (chat.isSystem() && !(chat instanceof ClientChatReceivedEvent.System)) {
             // Profiless message
-            System.out.println(chat.getClass().getName());
             chat.setMessage(ChatHooks.processMessage(chat.getMessage()));
         }
     }
@@ -89,9 +88,11 @@ public class RestoreChatLinksForge {
             final MutableText modified = MutableText.of(translatableText);
             final Object[] args = translatableText.getArgs();
             for (int i = 0; i < args.length; i++) {
-                Text txt = ((Text) args[i]);
-                if (txt.getStyle().isEmpty() && !txt.getString().trim().isEmpty()) {
+                if (args[i] instanceof Text txt) {
                     args[i] = ChatLink.newChatWithLinks(txt.getString());
+                }
+                if (args[i] instanceof String str) {
+                    args[i] = ChatLink.newChatWithLinks(str);
                 }
             }
             chat.setMessage(modified);
