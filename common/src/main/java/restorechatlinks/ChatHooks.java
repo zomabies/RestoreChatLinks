@@ -6,13 +6,20 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextContent;
 import net.minecraft.text.TranslatableTextContent;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import restorechatlinks.config.RCLConfig;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 public class ChatHooks {
+
+    private static final Logger LOGGER = LogManager.getLogger("RCL-DEBUG");
 
     private static final HashSet<String> CHAT_TRANSLATION_TYPE = new HashSet<>(
             List.of("chat.type.announcement", "chat.type.text")
@@ -27,6 +34,8 @@ public class ChatHooks {
 
         final TextContent textContent = message.getContent();
 
+        logMessage(() -> Pair.of("Before: {}", Text.Serializer.toJson(message)));
+
         if (textContent instanceof LiteralTextContent) {
 
             AtomicReference<MutableText> modifiedText = new AtomicReference<>();
@@ -39,6 +48,7 @@ public class ChatHooks {
                 return Optional.empty();
             }, Style.EMPTY);
             modifiedText.get().setStyle(message.getStyle());
+            logMessage(() -> Pair.of("AFTER-(LITERAL): {}", Text.Serializer.toJson(modifiedText.get())));
             return modifiedText.get();
         }
 
@@ -56,10 +66,17 @@ public class ChatHooks {
                     args[i] = ChatLink.newChatWithLinks(str);
                 }
             }
+            logMessage(() -> Pair.of("AFTER-(TRANSLATABLE): {}", Text.Serializer.toJson(modified)));
             return (modified);
         }
 
         return message;
     }
 
+    private static void logMessage(Supplier<Pair<String, String>> message) {
+        if (RCLConfig.debugMessage) {
+            Pair<String, String> messagePair = message.get();
+            LOGGER.info(messagePair.getLeft(), messagePair.getRight());
+        }
+    }
 }
