@@ -97,9 +97,6 @@ public class RestoreChatLinksFabric implements ModInitializer {
         }
         // Player message (includes /say)
         if (gameProfile != null) {
-            if (text.getContent() instanceof final TranslatableTextContent translated) {
-                text = ChatHooks.copyTranslatableText(translated);
-            }
             text = ChatHooks.processMessage(text);
             // "emulate" net.minecraft.client.network.message.MessageHandler.processChatMessageInternal
             // to preserve signing information

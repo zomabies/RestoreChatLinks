@@ -58,7 +58,7 @@ public class ChatHooks {
         if (textContent instanceof TranslatableTextContent translatableText
                 && CHAT_TRANSLATION_TYPE.contains(translatableText.getKey())) {
 
-            final MutableText modified = MutableText.of(translatableText).setStyle(message.getStyle());
+            final MutableText modified = copyTranslatableText(translatableText).setStyle(message.getStyle());
             modified.getSiblings().addAll(message.getSiblings());
             final Object[] args = translatableText.getArgs();
             for (int i = 0; i < args.length; i++) {
