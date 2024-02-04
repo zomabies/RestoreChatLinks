@@ -24,6 +24,7 @@ public class Config {
         public static ForgeConfigSpec.BooleanValue colorLink;
         public static ForgeConfigSpec.ConfigValue<String> colorName;
         public static ForgeConfigSpec.BooleanValue debugMessage;
+        public static ForgeConfigSpec.BooleanValue convertFormattingCodes;
 
         Client(ForgeConfigSpec.Builder builder) {
             builder.comment("General configuration settings").push("client");
@@ -43,6 +44,11 @@ public class Config {
                     .comment("Color of the link", "Valid colors: ", String.join(", ", colorNames))
                     .defineInList("colorName", Formatting.BLUE.getName(), colorNames);
 
+            convertFormattingCodes = builder
+                    .comment("Prevent link detection issues with message containing formatting codes")
+                    .comment("Required for received messages that contains it")
+                    .define("convertFormattingCode", false);
+
             debugMessage = builder
                     .comment("Show raw message for debugging")
                     .define("debugMessage", false);
@@ -55,6 +61,7 @@ public class Config {
         RCLConfig.underlineLink = Client.underlineLink.get();
         RCLConfig.colorLink = Client.colorLink.get();
         RCLConfig.colorName = Client.colorName.get();
+        RCLConfig.convertFormattingCodes = Client.convertFormattingCodes.get();
         RCLConfig.debugMessage = Client.debugMessage.get();
     }
 

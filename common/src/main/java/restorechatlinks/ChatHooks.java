@@ -2,10 +2,13 @@ package restorechatlinks;
 
 import net.minecraft.text.LiteralTextContent;
 import net.minecraft.text.MutableText;
+import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextContent;
+import net.minecraft.text.TextVisitFactory;
 import net.minecraft.text.TranslatableTextContent;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,16 +36,24 @@ public class ChatHooks {
         event.setMessage(text);
     }
 
-    public static Text processMessage(Text message) {
+    public static Text processMessage(final Text message) {
 
         final TextContent textContent = message.getContent();
 
         logMessage(() -> Pair.of("Before: {}", Text.Serializer.toJson(message)));
 
         if (textContent instanceof LiteralTextContent) {
-
+            Text literalText = message;
             AtomicReference<MutableText> modifiedText = new AtomicReference<>();
-            message.visit((style, asString) -> {
+
+            if (RCLConfig.convertFormattingCodes) {
+                // some chat modification returns formatting code, which introduces issues.
+                Text styled = convertToStyled(message);
+                literalText = styled;
+                logMessage(() -> Pair.of("Styled: {}", Text.Serializer.toJson(styled)));
+            }
+
+            literalText.visit((style, asString) -> {
                 if (modifiedText.get() == null) {
                     modifiedText.set(((MutableText) ChatLink.newChatWithLinks(asString)).setStyle(style));
                 } else {
@@ -79,11 +90,49 @@ public class ChatHooks {
     /**
      * Creates a copy without updateTranslations called. Used for multiplayer
      **/
-    public static MutableText copyTranslatableText(TranslatableTextContent translated){
+    public static MutableText copyTranslatableText(TranslatableTextContent translated) {
         // chat HUD uses cached "translation", build by "TranslatableTextContent#updateTranslation".
         // MessageHandler#processChatMessageInternal => getStatus => MessageTrustStatus.getStatus (update in multiplayer)
         // manual editing using getArgs does not update the cache
         return Text.translatable(translated.getKey(), translated.getArgs());
+    }
+
+    /**
+     * Converts '§' formatting codes to styled
+     * Example: §6ABC -> {"text":"ABC", "color":"gold"}
+     *
+     * @return Styled string without '§' literal
+     */
+    public static Text convertToStyled(StringVisitable inlineFormatText) {
+        StringBuilder stringBuilder = new StringBuilder();
+        MutableObject<MutableText> mutableTextWrapper = new MutableObject<>(Text.literal(""));
+        MutableObject<Style> prevStyle = new MutableObject<>();
+
+        TextVisitFactory.visitFormatted(inlineFormatText, Style.EMPTY, (int index, Style currentStyle, int codePoint) -> {
+
+            if (prevStyle.getValue() == null) {
+                prevStyle.setValue(currentStyle);
+            } else if (!prevStyle.getValue().equals(currentStyle)) {
+                updateTextAndStyle(stringBuilder, mutableTextWrapper, prevStyle, currentStyle);
+            }
+
+            //System.out.println(Character.toString(codePoint) + "  -> " + currentStyle);
+            stringBuilder.appendCodePoint(codePoint);
+            return true;
+        });
+
+        updateTextAndStyle(stringBuilder, mutableTextWrapper, prevStyle, null);
+        return mutableTextWrapper.getValue();
+    }
+
+    private static void updateTextAndStyle(StringBuilder stringBuilder, MutableObject<MutableText> mutableTextWrapper, MutableObject<Style> prevStyle, Style currentStyle) {
+        if (mutableTextWrapper.getValue() == null) {
+            mutableTextWrapper.setValue(Text.literal(stringBuilder.toString()).setStyle(prevStyle.getValue()));
+        } else {
+            mutableTextWrapper.getValue().append(Text.literal(stringBuilder.toString()).setStyle(prevStyle.getValue()));
+        }
+        stringBuilder.delete(0, stringBuilder.length());
+        prevStyle.setValue(currentStyle);
     }
 
     private static void logMessage(Supplier<Pair<String, String>> message) {
