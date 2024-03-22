@@ -8,7 +8,7 @@ buildscript {
     }
     dependencies {
         classpath group: 'architectury-plugin', name: 'architectury-plugin.gradle.plugin', version: '3.4-SNAPSHOT', changing: true
-        classpath group: 'dev.architectury', name: 'architectury-loom', version: '1.0-SNAPSHOT', changing: true
+        classpath group: 'dev.architectury', name: 'architectury-loom', version: '1.4-SNAPSHOT', changing: true
     }
 }
 import org.apache.tools.ant.filters.ReplaceTokens

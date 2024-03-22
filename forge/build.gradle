@@ -17,6 +17,7 @@ loom {
 
         //mixinConfig "restorechatlinks-common.mixins.json"
         //mixinConfig "restorechatlinks.mixins.json"
+        useForgeLoggerConfig = true
     }
 
     runs {
@@ -72,13 +73,13 @@ shadowJar {
     exclude "architectury.common.json"
 
     configurations = [project.configurations.shadowCommon]
-    classifier "dev-shadow"
+    archiveClassifier = "dev-shadow"
 }
 
 remapJar {
     inputFile.set shadowJar.archiveFile
     dependsOn shadowJar
-    classifier null
+    archiveClassifier = null
 }
 
 jar {
@@ -92,7 +93,7 @@ jar {
                 "Implementation-Vendor"   : "Zom",
         ])
     }
-    classifier "dev"
+    archiveClassifier = "dev"
 }
 
 sourcesJar {
