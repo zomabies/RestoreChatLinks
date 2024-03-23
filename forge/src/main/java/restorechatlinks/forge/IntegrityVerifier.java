@@ -2,6 +2,7 @@ package restorechatlinks.forge;
 
 import cpw.mods.jarhandling.SecureJar;
 import cpw.mods.jarhandling.SecureJar.Status;
+import cpw.mods.niofs.union.UnionPath;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.apache.logging.log4j.LogManager;
@@ -10,9 +11,11 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.CodeSigner;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
@@ -38,6 +41,19 @@ public final class IntegrityVerifier {
 
             List<Path> jarContents = pathStream.collect(Collectors.toList());
 
+            // Forge 1.20.2+ SecureModules compact
+            boolean isSecureModule = !jarContents.isEmpty() && !(jarContents.get(0) instanceof UnionPath);
+            if (isSecureModule) {
+                LOGGER.debug("Verifier run under Forge SecureModule");
+            }
+            Function<Path, String> pathToString = path -> {
+                String p = path.toString();
+                if (isSecureModule) {
+                    return p.startsWith("/") ? p.substring(1) : p;
+                }
+                return p;
+            };
+
             boolean isTampered = false;
             boolean isAppended = false;
 
@@ -48,10 +64,10 @@ public final class IntegrityVerifier {
             final Set<String> manifestPaths = actualManifestPaths.getEntries().keySet();
 
             for (Path path : jarContents) {
-                final String pathName = path.toString();
+                final String stripPath = pathToString.apply(path); // Forge 1.20.2+ SecureModules compact
 
-                final Attributes sjhTrustedManifestPath = secureJar.getTrustedManifestEntries(pathName);
-                final Attributes fileManifestAttr = actualManifestPaths.getAttributes(pathName);
+                final Attributes sjhTrustedManifestPath = secureJar.getTrustedManifestEntries(stripPath);
+                final Attributes fileManifestAttr = actualManifestPaths.getAttributes(stripPath);
 
                 // cpw.mods.jarhandling.impl.Jar::verifyAndGetSigners treat extra files as "VERIFIED"
                 if (sjhTrustedManifestPath == null
@@ -64,7 +80,23 @@ public final class IntegrityVerifier {
                     continue;
                 }
 
-                Status status = secureJar.verifyPath(path);
+                Status status;
+                if (isSecureModule) {
+                    try {
+                        // path in manifest is not same with ZipPath ("/" prefix)
+                        // manually provide fixed path for verify
+                        final CodeSigner[] signers = secureJar
+                                .moduleDataProvider()
+                                .verifyAndGetSigners(stripPath, Files.readAllBytes(path));
+                        status = signers != null ? secureJar.getFileStatus(stripPath) : Status.INVALID;
+                    } catch (IOException e) {
+                        LOGGER.error("Failed to verify file (assume valid), via SecureModule", e);
+                        status = Status.VERIFIED;
+                    }
+                } else {
+                    status = secureJar.verifyPath(path);
+                }
+
                 if (status != Status.VERIFIED) {
                     invalidFiles.add(path);
                     isTampered = true;
@@ -74,7 +106,7 @@ public final class IntegrityVerifier {
                 }
             }
 
-            Set<String> allPaths = jarContents.stream().map(Path::toString).collect(Collectors.toUnmodifiableSet());
+            Set<String> allPaths = jarContents.stream().map(pathToString).collect(Collectors.toUnmodifiableSet());
             manifestPaths.removeAll(allPaths);
             final boolean hasMissingFile = manifestPaths.size() > 0;
             if (hasMissingFile) {
