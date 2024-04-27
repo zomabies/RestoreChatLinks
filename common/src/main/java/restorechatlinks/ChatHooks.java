@@ -8,6 +8,7 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TextContent;
 import net.minecraft.text.TextVisitFactory;
 import net.minecraft.text.TranslatableTextContent;
+import net.minecraft.util.Formatting;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -42,7 +43,7 @@ public class ChatHooks {
 
         logMessage(() -> Pair.of("Before: {}", Text.Serializer.toJson(message)));
 
-        if (textContent instanceof LiteralTextContent) {
+        if (textContent instanceof LiteralTextContent || textContent == TextContent.EMPTY) {
             Text literalText = message;
             AtomicReference<MutableText> modifiedText = new AtomicReference<>();
 
@@ -51,6 +52,12 @@ public class ChatHooks {
                 Text styled = convertToStyled(message);
                 literalText = styled;
                 logMessage(() -> Pair.of("Styled: {}", Text.Serializer.toJson(styled)));
+            }
+
+            // Prevent text siblings shifted to front when TextContent is "EMPTY"
+            // It skips itself when using visitor methods.
+            if (textContent == TextContent.EMPTY) {
+                modifiedText.set(Text.empty());
             }
 
             literalText.visit((style, asString) -> {
