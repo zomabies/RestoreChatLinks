@@ -1,8 +1,10 @@
 package restorechatlinks.fabric.mixin;
 
 import com.google.common.collect.ImmutableMap;
+import net.fabricmc.loader.api.FabricLoader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -21,15 +23,34 @@ public class RCLMixinPlugin implements IMixinConfigPlugin {
 
     private static final Supplier<Boolean> TRUE = () -> true;
 
+    public static final Supplier<Boolean> HAS_CHAT_HEADS = () -> FabricLoader.getInstance().isModLoaded("chat_heads");
+
+    @Nullable
     @SuppressWarnings("removal")
-    public static final boolean LOAD_LEGACY_IMPL = AccessController.doPrivileged(
-            (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("rcl.loadLegacyMixin")
+    public static final Boolean LOAD_LEGACY_IMPL = AccessController.doPrivileged(
+            (PrivilegedAction<Boolean>) () -> {
+                String rclProperty = System.getProperty("rcl.loadLegacyMixin");
+                if (rclProperty == null) {
+                    return null;
+                }
+                return Boolean.getBoolean("rcl.loadLegacyMixin");
+            }
     );
 
     private static final Map<String, Supplier<Boolean>> CONDITIONS = ImmutableMap.of(
             "restorechatlinks.fabric.mixin.MixinMessageHandler", () -> {
+                if (LOAD_LEGACY_IMPL == null) {
+                    // Chat Heads will not work if canceled via ClientReceiveMessageEvents.ALLOW_CHAT,
+                    // since it's mixin is inserted after fabric-api's.
+                    // Enable if the system property is not set explicitly.
+                    final boolean hasChatHead = HAS_CHAT_HEADS.get();
+                    if (hasChatHead) {
+                        LOGGER.debug("Chat Heads is present, enabled mixin version");
+                    }
+                    return hasChatHead;
+                }
                 if (LOAD_LEGACY_IMPL) {
-                    LOGGER.debug("Legacy version loaded.");
+                    LOGGER.debug("Requested mixin version from system property");
                 }
                 return LOAD_LEGACY_IMPL;
             }

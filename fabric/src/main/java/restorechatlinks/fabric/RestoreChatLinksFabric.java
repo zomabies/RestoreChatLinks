@@ -15,7 +15,6 @@ import net.minecraft.client.session.report.log.ReceivedMessage;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableTextContent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -56,9 +55,14 @@ public class RestoreChatLinksFabric implements ModInitializer {
             ConfigHelper.RegisterConfig();
         }
 
+        if (RCLMixinPlugin.HAS_CHAT_HEADS.get() && RCLMixinPlugin.LOAD_LEGACY_IMPL == null) {
+            LOGGER.info("Chat Heads is present, enabling mixin version by default");
+            return;
+        }
+
         if (meetMinFabricApiRequirement()) {
 
-            if (RCLMixinPlugin.LOAD_LEGACY_IMPL) {
+            if (Boolean.TRUE.equals(RCLMixinPlugin.LOAD_LEGACY_IMPL)) {
                 LOGGER.warn("\"rcl.loadLegacyMixin\" is incompatible with fabric-api version, skipping event register");
             } else {
                 client = MinecraftClient.getInstance();
@@ -67,7 +71,7 @@ public class RestoreChatLinksFabric implements ModInitializer {
                 ClientReceiveMessageEvents.ALLOW_CHAT.register(RestoreChatLinksFabric::onAllowChatMessage);
             }
 
-        } else if (!RCLMixinPlugin.LOAD_LEGACY_IMPL) {
+        } else if (RCLMixinPlugin.LOAD_LEGACY_IMPL == null || !RCLMixinPlugin.LOAD_LEGACY_IMPL) {
             LOGGER.error("Chat links processing is not available!");
             if (FabricLoader.getInstance().isModLoaded("fabric-api")) {
                 LOGGER.error("Installed fabric-api does not meet min requirement, update Fabric or use -Drcl.loadLegacyMixin=true");

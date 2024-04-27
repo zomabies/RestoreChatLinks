@@ -53,6 +53,12 @@ public class ChatHooks {
                 logMessage(() -> Pair.of("Styled: {}", Text.Serialization.toJsonString(styled)));
             }
 
+            // Prevent text siblings shifted to front when TextContent is "EMPTY"
+            // It skips itself when using visitor methods.
+            if (textContent == PlainTextContent.EMPTY) {
+                modifiedText.set(Text.empty());
+            }
+
             literalText.visit((style, asString) -> {
                 if (modifiedText.get() == null) {
                     modifiedText.set(((MutableText) ChatLink.newChatWithLinks(asString)).setStyle(style));

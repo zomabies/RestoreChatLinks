@@ -59,4 +59,18 @@ public class MixinMessageHandler {
             ci.cancel();
         }
     }
+
+
+    @ModifyVariable(
+            method = "Lnet/minecraft/client/network/message/MessageHandler;processChatMessageInternal(Lnet/minecraft/network/message/MessageType$Parameters;Lnet/minecraft/network/message/SignedMessage;Lnet/minecraft/text/Text;Lcom/mojang/authlib/GameProfile;ZLjava/time/Instant;)Z",
+            at = @At(
+                    value = "INVOKE_ASSIGN",
+                    target = "Lnet/minecraft/client/network/message/MessageHandler;getStatus(Lnet/minecraft/network/message/SignedMessage;Lnet/minecraft/text/Text;Ljava/time/Instant;)Lnet/minecraft/client/network/message/MessageTrustStatus;"
+            ),
+            argsOnly = true
+    )
+    private Text rcl$processPlayerMessage(Text decorated) {
+        // include both signed and unsigned messages
+        return ChatHooks.processMessage(decorated);
+    }
 }
