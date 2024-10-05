@@ -1,0 +1,221 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "7.1.2"
+}
+
+architectury {
+    platformSetupLoomIde()
+    neoForge()
+}
+
+loom {
+    //accessWidenerPath = project(":common").loom.accessWidenerPath
+    mixin.useLegacyMixinAp = true
+    mixin.defaultRefmapName = "${archivesBaseName.toLowerCase()}-refmap.json"
+
+    neoForge {
+        //convertAccessWideners = true
+        //extraAccessWideners.add loom.accessWidenerPath.get().asFile.name
+
+        //mixinConfig "restorechatlinks-common.mixins.json"
+        //mixinConfig "restorechatlinks.mixins.json"
+        //useForgeLoggerConfig = true
+    }
+
+    runs {
+        client {
+            vmArgs '-Xmx1512M'
+            property 'forge.logging.console.level', 'debug'
+        }
+
+        server {
+            vmArgs('-Xmx1512m')
+        }
+    }
+
+}
+
+configurations {
+    common
+    shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentNeoForge.extendsFrom common
+}
+
+repositories {
+
+    maven {
+        name = 'NeoForged Maven'
+        url "https://maven.neoforged.net/releases/"
+    }
+
+    maven {
+        name = 'Curse Maven'
+        url = 'https://cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+}
+
+dependencies {
+    neoForge "net.neoforged:neoforge:${rootProject.neoforge_version}"
+    // Remove the next line if you don't want to depend on the API
+    // modApi "dev.architectury:architectury-neoforge:${rootProject.architectury_version}"
+
+    modImplementation "curse.maven:configured-457570:5105024"
+
+    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge")) { transitive = false }
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("META-INF/mods.toml") {
+        expand "version": project.version
+    }
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand "version": project.version
+    }
+}
+
+shadowJar {
+    exclude "fabric.mod.json"
+    exclude "architectury.common.json"
+
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = "dev-shadow"
+}
+
+remapJar {
+    inputFile.set shadowJar.archiveFile
+    dependsOn shadowJar
+    archiveClassifier = null
+}
+
+jar {
+    manifest {
+        attributes([
+                "Specification-Title"   : "RestoreChatLink",
+                "Specification-Vendor"  : "Zom",
+                "Specification-Version" : "1", // We are version 1 of ourselves
+                "Implementation-Title"  : project.name,
+                "Implementation-Version": "${project.version}",
+                "Implementation-Vendor" : "Zom",
+        ])
+    }
+    archiveClassifier = "dev"
+}
+
+sourcesJar {
+    def commonSources = project(":common").sourcesJar
+    dependsOn commonSources
+    from commonSources.archiveFile.map { zipTree(it) }
+}
+
+
+def hasSigning = SignJarExt.hasSigning(project)
+
+if (hasSigning) {
+    // continue from main gradle file https://stackoverflow.com/a/54094378
+    compileJava {
+        source = processSource.outputs
+    }
+
+    def signNeoForgeJar = SignJarExt.createSignJarTask(
+            project,
+            tasks.named("remapJar", net.fabricmc.loom.task.RemapJarTask),
+            hasSigning
+    )
+    signNeoForgeJar.configure {
+        refTimeStampFile = 'mods.toml'
+    }
+
+    // enable signing on build
+    tasks.named("build").configure {
+        dependsOn signNeoForgeJar
+    }
+}
+
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import net.fabricmc.loom.api.mappings.layered.MappingsNamespace
+import net.fabricmc.loom.task.RemapJarTask
+import net.fabricmc.loom.util.ZipUtils
+
+// Remap pre 1.20.6 forge jar to Mojmap runtime mapping
+// Adapted from,
+// https://github.com/emilyploszaj/emi/blob/6127e8f6a9b736140c384f58d20faadd61add2db/xplat/mojmap/build.gradle#L14
+def mojmapForgeJar = tasks.register('mojmapForgeJar', RemapJarTask, {
+
+    classpath.from loom.getMinecraftJarsCollection(MappingsNamespace.NAMED)
+    def forgeProject = project(':forge')
+    def forgeShadowJar = forgeProject.tasks.named('shadowJar', ShadowJar) // jar is Yarn mapped
+    dependsOn forgeShadowJar
+
+    inputFile.convention(forgeShadowJar.flatMap { it.archiveFile })
+    destinationDirectory.convention(forgeShadowJar.flatMap { it.destinationDirectory })
+    archiveVersion.convention(forgeProject.provider(() -> {
+        String version = forgeShadowJar.flatMap { it.archiveVersion }.get()
+        version = "${version.tokenize('+')[0]}+1.20.6"
+        return version
+    }))
+
+    sourceNamespace = 'named'
+    targetNamespace = 'mojang'
+
+    remapperIsolation = true
+
+    doLast {
+        def remapZip = getArchiveFile().getOrNull()
+        if (remapZip != null) {
+            // replace minimum range for runtime Mojmap
+            def replacement = {
+                str -> str
+                        .replace("[1.20.3,)", "[1.20.6,)") // min requirement
+                        .replace(forgeProject.version.toString(), "${version.tokenize('+')[0]}+1.20.6") // mod version
+            } as ZipUtils.UnsafeUnaryOperator<String> // https://groovy-lang.org/closures.html#_closure_coercion
+            ZipUtils.transformString(remapZip.getAsFile().toPath(), Map.of("META-INF/mods.toml", replacement))
+        }
+    }
+})
+
+tasks.register("buildMojmapForgeJar") {
+    dependsOn mojmapForgeJar
+}
+
+if (hasSigning) {
+    def signMojForgeJarTask = SignJarExt.createSignJarTask(
+            project(':forge'),
+            mojmapForgeJar,
+            hasSigning,
+            "MojmapForge"
+    )
+    signMojForgeJarTask.configure {
+        refTimeStampFile = 'mods.toml'
+    }
+
+    tasks.named("buildMojmapForgeJar").configure {
+        dependsOn signMojForgeJarTask
+    }
+}
+
+
+components.java {
+    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+        skip()
+    }
+}
+
+publishing {
+    publications {
+        mavenForge(MavenPublication) {
+            artifactId = rootProject.archives_base_name + "-" + project.name
+            from components.java
+        }
+    }
+
+    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+    repositories {
+        // Add repositories to publish to here.
+    }
+}
