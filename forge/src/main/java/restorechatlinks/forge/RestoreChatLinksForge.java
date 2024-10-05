@@ -1,9 +1,6 @@
 package restorechatlinks.forge;
 
 import cpw.mods.jarhandling.SecureJar;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableTextContent;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -19,7 +16,6 @@ import net.minecraftforge.fml.loading.moddiscovery.ModFileInfo;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.apache.commons.codec.digest.DigestUtils;
 import restorechatlinks.ChatHooks;
-import restorechatlinks.ChatLink;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.forge.config.Config;
 
@@ -82,29 +78,15 @@ public class RestoreChatLinksForge {
     }
 
     private void onPlayerChatReceived(ClientChatReceivedEvent.Player chat) {
-        final Text text = chat.getMessage();
-        if (text.getContent() instanceof TranslatableTextContent translatableText) {
-            final MutableText modified = ChatHooks.copyTranslatableText(translatableText);
-            modified.setStyle(text.getStyle());
-            final Object[] args = translatableText.getArgs();
-            for (int i = 0; i < args.length; i++) {
-                if (args[i] instanceof Text txt) {
-                    args[i] = ChatLink.newChatWithLinks(txt.getString());
-                }
-                if (args[i] instanceof String str) {
-                    args[i] = ChatLink.newChatWithLinks(str);
-                }
-            }
-            chat.setMessage(modified);
-        }
+        chat.setMessage(ChatHooks.processMessage(chat.getMessage()));
     }
 
     static {
         final IModFile modFile = ModList.get().getModFileById(RestoreChatLinks.MOD_ID).getFile();
         if (modFile.getModFileInfo() instanceof ModFileInfo modInfo) {
-            String fingerprint = modInfo.getCodeSigningFingerprint().orElse(null);
+            String fingerprint = modInfo.getCodeSigningFingerprint().orElse("").toLowerCase(Locale.ROOT);
             if (IS_SIGNED && FMLLoader.isProduction() && !MOD_SIGNATURE.toLowerCase(Locale.ROOT).equals(fingerprint)) {
-                throw new SecurityException("Jar fingerprint does not match");
+                throw new SecurityException("Jar fingerprint does not match, fp: " + fingerprint);
             }
         }
 

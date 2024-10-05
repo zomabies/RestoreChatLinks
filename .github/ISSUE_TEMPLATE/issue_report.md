@@ -28,4 +28,4 @@ assignees: ''
 <!-- Link(s) to Github Gist with full latest.log -->
 
 
-[ ] I have enabled **`debugMessage`** in mod config
+- [ ] I have enabled **`debugMessage`** in mod config
