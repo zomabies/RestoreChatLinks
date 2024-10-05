@@ -40,7 +40,7 @@ public class ChatHooks {
 
         final TextContent textContent = message.getContent();
 
-        logMessage(() -> Pair.of("Before: {}", Text.Serialization.toJsonString(message)));
+        logMessage(() -> Pair.of("Before: {}", message.toString()));
 
         if (textContent instanceof PlainTextContent) {
             Text literalText = message;
@@ -50,7 +50,7 @@ public class ChatHooks {
                 // some chat modification returns formatting code, which introduces issues.
                 Text styled = convertToStyled(message);
                 literalText = styled;
-                logMessage(() -> Pair.of("Styled: {}", Text.Serialization.toJsonString(styled)));
+                logMessage(() -> Pair.of("Styled: {}", styled.toString()));
             }
 
             // Prevent text siblings shifted to front when TextContent is "EMPTY"
@@ -68,7 +68,7 @@ public class ChatHooks {
                 return Optional.empty();
             }, Style.EMPTY);
             modifiedText.get().setStyle(message.getStyle());
-            logMessage(() -> Pair.of("AFTER-(LITERAL): {}", Text.Serialization.toJsonString(modifiedText.get())));
+            logMessage(() -> Pair.of("AFTER-(LITERAL): {}", modifiedText.get().toString()));
             return modifiedText.get();
         }
 
@@ -86,7 +86,7 @@ public class ChatHooks {
                     args[i] = ChatLink.newChatWithLinks(str);
                 }
             }
-            logMessage(() -> Pair.of("AFTER-(TRANSLATABLE): {}", Text.Serialization.toJsonString(modified)));
+            logMessage(() -> Pair.of("AFTER-(TRANSLATABLE): {}", modified.toString()));
             return (modified);
         }
 
