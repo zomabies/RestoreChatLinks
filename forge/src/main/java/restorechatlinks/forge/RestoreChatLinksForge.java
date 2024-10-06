@@ -10,6 +10,7 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.IConfigSpec;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -28,6 +29,7 @@ import restorechatlinks.forge.config.Config;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 import java.security.CodeSigner;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -45,7 +47,12 @@ public class RestoreChatLinksForge {
     private static final MethodHandle MH_SystemMessageReceivedEvent$setMessage;
     private static final boolean HAS_MH_1_20_6;
 
+    @SuppressWarnings("unused")
     public RestoreChatLinksForge() {
+        this(null); // compatibility no-arg ctor
+    }
+
+    public RestoreChatLinksForge(FMLJavaModLoadingContext context) {
         boolean isValidJar = FMLLoader.isProduction() && RestoreChatLinks.validJarSignature(ModList.get()
                 .getModFileById(RestoreChatLinks.MOD_ID)
                 .getFile()
@@ -58,12 +65,30 @@ public class RestoreChatLinksForge {
         // Submit our event bus to let architectury register our content on the right time
         //EventBuses.registerModEventBus(RestoreChatLinks.MOD_ID, FMLJavaModLoadingContext.get().getModEventBus());
         RestoreChatLinks.init();
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(EventPriority.HIGH, this::onClientEvent);
 
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, Config.clientSpec);
+        if (context == null) {
+            // forge version prior to ctor injection
+            context = FMLJavaModLoadingContext.get();
+            ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, Config.clientSpec);
+        } else {
+            // Newer forge
+            // FMLJavaModLoadingContext.registerConfig(ModConfig.Type type, IConfigSpec configSpec)
+            try {
+                final Method registerConfig = context
+                        .getClass()
+                        .getMethod("registerConfig", ModConfig.Type.class, IConfigSpec.class);
+                registerConfig.setAccessible(true);
+                registerConfig.invoke(context, ModConfig.Type.CLIENT, Config.clientSpec);
+                LOGGER.info("Config registration complete (reflect)");
+            } catch (Throwable e) {
+                throw new RuntimeException("Unable to register config", e);
+            }
+        }
 
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onConfigLoad);
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onConfigChange);
+        context.getModEventBus().addListener(EventPriority.HIGH, this::onClientEvent);
+
+        context.getModEventBus().addListener(this::onConfigLoad);
+        context.getModEventBus().addListener(this::onConfigChange);
 
     }
 
