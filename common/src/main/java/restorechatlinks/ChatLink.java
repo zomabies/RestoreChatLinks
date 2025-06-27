@@ -57,6 +57,7 @@ public class ChatLink {
             lastEnd = end;
             String url = string.substring(start, end);
             MutableText link = Text.literal(url);
+            URI uri = null;
 
             try {
                 // Add schema so client doesn't crash.
@@ -70,6 +71,7 @@ public class ChatLink {
                     }
                     url = "http://" + url;
                 }
+                uri = new URI(url);
             } catch (URISyntaxException e) {
                 // Bad syntax bail out!
                 if (ichat == null) ichat = Text.literal(url);
@@ -77,7 +79,7 @@ public class ChatLink {
                 continue;
             }
             // Set the click event and append the link.
-            ClickEvent click = new ClickEvent(ClickEvent.Action.OPEN_URL, url);
+            ClickEvent click = new ClickEvent.OpenUrl(uri);
             Style style = link.getStyle().withClickEvent(click);
 
             if (RCLConfig.underlineLink) {

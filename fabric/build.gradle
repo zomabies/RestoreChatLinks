@@ -40,10 +40,10 @@ dependencies {
     // Remove the next line if you don't want to depend on the API
     // modApi "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
 
-    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:20.4.3"
+    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:21.5.1"
 
-    modImplementation "curse.maven:configured-457570:5105023"
-    modRuntimeOnly "com.terraformersmc:modmenu:9.0.0"
+    modImplementation "curse.maven:configured-457570:6417462"
+    modRuntimeOnly "com.terraformersmc:modmenu:14.0.0-rc.2"
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }

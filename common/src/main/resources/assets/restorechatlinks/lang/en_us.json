@@ -1,2 +1,8 @@
 {
+  "restorechatlinks.configuration.client": "Client",
+  "restorechatlinks.configuration.colorLink": "Color link",
+  "restorechatlinks.configuration.colorName": "Color name",
+  "restorechatlinks.configuration.underlineLink": "Underline link",
+  "restorechatlinks.configuration.convertFormattingCode": "Convert formatting code",
+  "restorechatlinks.configuration.debugMessage": "Debug message"
 }

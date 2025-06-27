@@ -6,13 +6,14 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.IConfigSpec;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.moddiscovery.ModFileInfo;
 import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforgespi.locating.IModFile;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -20,7 +21,6 @@ import restorechatlinks.ChatHooks;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.neoforge.config.Config;
 
-import java.lang.reflect.Method;
 import java.security.CodeSigner;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -45,23 +45,10 @@ public class RestoreChatLinksNeoForge {
         RestoreChatLinks.init();
 
         modEventBus.addListener(this::onClientEvent);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, Config.clientSpec);
 
-        try {
-            // 1.20.4 - 1.20.6
-            modContainer.addConfig(new ModConfig(ModConfig.Type.CLIENT, Config.clientSpec, modContainer));
-        } catch (NoSuchMethodError ex) {
-            // 1.21+
-            // ModContainer.registerConfig(ModConfig.Type type, IConfigSpec configSpec)
-            try {
-                final Method registerConfig = modContainer
-                        .getClass()
-                        .getMethod("registerConfig", ModConfig.Type.class, IConfigSpec.class);
-                registerConfig.setAccessible(true);
-                registerConfig.invoke(modContainer, ModConfig.Type.CLIENT, Config.clientSpec);
-            } catch (Throwable e) {
-                throw new RuntimeException("Unable to register config", e);
-            }
-        }
+        modContainer.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+
         modEventBus.addListener(this::onConfigLoad);
         modEventBus.addListener(this::onConfigChange);
     }

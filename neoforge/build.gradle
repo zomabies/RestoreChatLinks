@@ -61,7 +61,7 @@ dependencies {
     // Remove the next line if you don't want to depend on the API
     // modApi "dev.architectury:architectury-neoforge:${rootProject.architectury_version}"
 
-    modImplementation "curse.maven:configured-457570:5105024"
+    // modImplementation "curse.maven:configured-457570:6417464"
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge")) { transitive = false }
@@ -136,7 +136,7 @@ if (hasSigning) {
     }
 }
 
-
+/*
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import net.fabricmc.loom.api.mappings.layered.MappingsNamespace
 import net.fabricmc.loom.task.RemapJarTask
@@ -197,7 +197,7 @@ if (hasSigning) {
     tasks.named("buildMojmapForgeJar").configure {
         dependsOn signMojForgeJarTask
     }
-}
+}*/
 
 
 components.java {
