@@ -104,6 +104,9 @@ public class RestoreChatLinksFabric implements ModInitializer {
             text = ChatHooks.processMessage(text);
             // "emulate" net.minecraft.client.network.message.MessageHandler.processChatMessageInternal
             // to preserve signing information
+            if (signedMessage == null) {
+                signedMessage = SignedMessage.ofUnsigned(gameProfile.getId(), text.getString());
+            }
             final MessageTrustStatus status = MessageTrustStatus.getStatus(signedMessage, text, instant);
             client.inGameHud.getChatHud().addMessage(text, signedMessage.signature(), status.createIndicator(signedMessage));
             client.getNarratorManager().narrate(parameters.applyNarrationDecoration(signedMessage.getContent()));
