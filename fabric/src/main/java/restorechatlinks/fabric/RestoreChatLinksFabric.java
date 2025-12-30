@@ -76,7 +76,7 @@ public class RestoreChatLinksFabric implements ModInitializer {
             if (FabricLoader.getInstance().isModLoaded("fabric-api")) {
                 LOGGER.error("Installed fabric-api does not meet min requirement, update Fabric or use -Drcl.loadLegacyMixin=true");
             } else {
-                LOGGER.error("Limited support for using non fabric-api version: \"-Drcl.loadLegacyMixin=true\"");
+                LOGGER.error("For using non fabric-api version: \"-Drcl.loadLegacyMixin=true\"");
             }
         }
     }
