@@ -19,10 +19,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import restorechatlinks.ChatHooks;
+import restorechatlinks.JarValidator;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.fabric.mixin.RCLMixinPlugin;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Instant;
 
 public class RestoreChatLinksFabric implements ModInitializer {
@@ -35,19 +36,6 @@ public class RestoreChatLinksFabric implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        if (!FabricLoader.getInstance().isDevelopmentEnvironment() && IS_SIGNED) {
-            ModContainer container = FabricLoader.getInstance().getModContainer(RestoreChatLinks.MOD_ID).orElse(null);
-            if (container != null) {
-                final ModOrigin origin = container.getOrigin();
-                if (origin.getKind() == ModOrigin.Kind.PATH) {
-                    final File modFile = origin.getPaths().get(0).toFile();
-                    boolean isValid = RestoreChatLinks.validJarSignature(modFile);
-                    if (!isValid && IS_SIGNED) {
-                        throw new SecurityException("Jar file is modified : " + modFile);
-                    }
-                }
-            }
-        }
 
         RestoreChatLinks.init();
 
@@ -146,10 +134,10 @@ public class RestoreChatLinksFabric implements ModInitializer {
             if (container != null) {
                 final ModOrigin origin = container.getOrigin();
                 if (origin.getKind() == ModOrigin.Kind.PATH) {
-                    final File modFile = origin.getPaths().get(0).toFile();
-                    boolean isValid = RestoreChatLinks.validJarSignature(modFile);
-                    if (!isValid && IS_SIGNED) {
-                        throw new SecurityException("Jar file is modified : " + modFile);
+                    final Path modFile = origin.getPaths().get(0);
+                    if (IS_SIGNED) {
+                        JarValidator validator = JarValidator.of(modFile).validate();
+                        validator.throwIfInvalid(MOD_SIGNATURE);
                     }
                 }
             }
