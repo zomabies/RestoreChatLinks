@@ -23,7 +23,7 @@
     "restorechatlinks-common.mixins.json"
   ],
   "depends": {
-    "minecraft": ">=1.20.3"
+    "minecraft": ">=1.20.3 <=1.21.4"
   },
   "recommends": {
     "forgeconfigapiport" : ">=20.4.1",
