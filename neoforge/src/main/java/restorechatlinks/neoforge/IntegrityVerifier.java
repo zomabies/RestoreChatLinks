@@ -118,7 +118,11 @@ public final class IntegrityVerifier {
             }
 
             Status jarStatus = (isAppended || hasMissingFile || isTampered) ? Status.INVALID : Status.VERIFIED;
-            modFile.setSecurityStatus(isProduction ? jarStatus : Status.NONE);
+            try {
+                modFile.setSecurityStatus(isProduction ? jarStatus : Status.NONE);
+            } catch (Throwable ignored) {
+                //ignored, its removed after some version in 1.21.7
+            }
             if (FMLLoader.isProduction() && jarStatus == Status.INVALID) {
                 throw new SecurityException("Jar Has been tampered! " + isAppended + " " + hasMissingFile + " " + isTampered);
             }
