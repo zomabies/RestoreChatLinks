@@ -1,7 +1,6 @@
 package restorechatlinks.forge;
 
 import cpw.mods.jarhandling.SecureJar;
-import net.minecraft.util.Util;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.client.event.SystemMessageReceivedEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -19,13 +18,18 @@ import restorechatlinks.JarValidator;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.forge.config.Config;
 
+import java.lang.reflect.Method;
 import java.security.CodeSigner;
+import java.util.UUID;
 
 @Mod(RestoreChatLinks.MOD_ID)
 public class RestoreChatLinksForge {
 
     public static final String MOD_SIGNATURE = "@signature@";
     public static final boolean IS_SIGNED = !MOD_SIGNATURE.replace('@', '\0').contains("signature");
+
+    // from net.minecraft.util.Util, not exists in 1.21.11
+    private static final UUID NIL_UUID = new UUID(0L, 0L);
 
     public RestoreChatLinksForge(FMLJavaModLoadingContext context) {
         if (IS_SIGNED && FMLLoader.isProduction()) {
@@ -39,6 +43,11 @@ public class RestoreChatLinksForge {
         RestoreChatLinks.init();
 
         context.registerConfig(ModConfig.Type.CLIENT, Config.clientSpec);
+
+        if (tryRegisterEB7Event(context)) {
+            ChatEventsEB7.LOGGER.debug("Using EventBus 7 to register events");
+            return;
+        }
 
         context.getModEventBus().addListener(EventPriority.HIGH, this::onClientEvent);
 
@@ -63,7 +72,7 @@ public class RestoreChatLinksForge {
 
     private void onChatReceived(ClientChatReceivedEvent chat) {
         // check manually, ClientChatReceivedEvent::isSystem is deprecated
-        if (chat.getSender().equals(Util.NIL_UUID)) {
+        if (chat.getSender().equals(NIL_UUID)) {
             // Profiless message
             chat.setMessage(ChatHooks.processMessage(chat.getMessage()));
         }
@@ -77,6 +86,36 @@ public class RestoreChatLinksForge {
         chat.setMessage(ChatHooks.processMessage(chat.getMessage()));
     }
 
+    private boolean tryRegisterEB7Event(FMLJavaModLoadingContext context) {
+        if (!ChatEventsEB7.HAS_NEW_EVENT_BUS) {
+            return false;
+        }
+        try {
+            Method getModBusGroupMethod = FMLJavaModLoadingContext.class.getMethod("getModBusGroup");
+            Object modBusGroup = getModBusGroupMethod.invoke(context);
+
+            ChatEventsEB7.registerGroupBusEvent(FMLClientSetupEvent.class, modBusGroup, this::onClientEventEB7);
+            ChatEventsEB7.registerGroupBusEvent(ModConfigEvent.Loading.class, modBusGroup, this::onConfigLoad);
+            ChatEventsEB7.registerGroupBusEvent(ModConfigEvent.Reloading.class, modBusGroup, this::onConfigChange);
+
+            return true;
+        } catch (ReflectiveOperationException e) {
+            ChatEventsEB7.LOGGER.error("Failed to register events (EB7), chat parsing will not work!", e);
+        } catch (Exception e) {
+            ChatEventsEB7.LOGGER.error("Error while registering events (EB7), chat parsing will not work!", e);
+        }
+        return false;
+    }
+
+    private void onClientEventEB7(FMLClientSetupEvent event) {
+        try {
+            ChatEventsEB7.registerModBusEvent(ClientChatReceivedEvent.class, this::onChatReceived);
+            ChatEventsEB7.registerModBusEvent(ClientChatReceivedEvent.Player.class, this::onPlayerChatReceived);
+            ChatEventsEB7.registerModBusEvent(SystemMessageReceivedEvent.class, this::onSystemChatReceived);
+        } catch (ReflectiveOperationException | SecurityException ex) {
+            ChatEventsEB7.LOGGER.error("Unable to register chat events (EB7), chat parsing will not work!", ex);
+        }
+    }
 
     static {
         final IModFile modFile = ModList.get().getModFileById(RestoreChatLinks.MOD_ID).getFile();

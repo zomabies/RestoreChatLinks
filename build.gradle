@@ -63,6 +63,14 @@ allprojects {
         // for more information about repositories.
     }
 
+    // manually bump transformer version as latest architectury plugin haven't upgrade its version
+    // with this fix https://github.com/architectury/architectury-transformer/pull/25
+    configurations.configureEach {
+        resolutionStrategy {
+            force 'dev.architectury:architectury-transformer:5.2.88'
+        }
+    }
+
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
         options.release = 21
