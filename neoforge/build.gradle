@@ -171,7 +171,7 @@ def mojmapForgeJar = tasks.register('mojmapForgeJar', RemapJarTask, {
             // replace minimum range for runtime Mojmap
             def replacement = {
                 str -> str
-                        .replace("[1.20.3,)", "[1.20.6,)") // min requirement
+                        .replace("[1.20.3,1.20.4]", "[1.20.6,1.21.4]") // min requirement
                         .replace(forgeProject.version.toString(), "${version.tokenize('+')[0]}+1.20.6") // mod version
             } as ZipUtils.UnsafeUnaryOperator<String> // https://groovy-lang.org/closures.html#_closure_coercion
             ZipUtils.transformString(remapZip.getAsFile().toPath(), Map.of("META-INF/mods.toml", replacement))

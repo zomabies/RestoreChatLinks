@@ -31,9 +31,9 @@ public class ChatHooks {
                     "commands.message.display.incoming")
     );
 
-    public static void onSystemMessage(ClientGameChatEvent event) {
-        Text text = processMessage(event.getMessage());
-        event.setMessage(text);
+    public static Text onSystemMessage(Text message) {
+        Text result = processMessage(message);
+        return result;
     }
 
     public static Text processMessage(final Text message) {
