@@ -19,10 +19,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import restorechatlinks.ChatHooks;
+import restorechatlinks.JarValidator;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.fabric.mixin.RCLMixinPlugin;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Instant;
 
 public class RestoreChatLinksFabric implements ModInitializer {
@@ -35,19 +36,6 @@ public class RestoreChatLinksFabric implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        if (!FabricLoader.getInstance().isDevelopmentEnvironment() && IS_SIGNED) {
-            ModContainer container = FabricLoader.getInstance().getModContainer(RestoreChatLinks.MOD_ID).orElse(null);
-            if (container != null) {
-                final ModOrigin origin = container.getOrigin();
-                if (origin.getKind() == ModOrigin.Kind.PATH) {
-                    final File modFile = origin.getPaths().get(0).toFile();
-                    boolean isValid = RestoreChatLinks.validJarSignature(modFile);
-                    if (!isValid && IS_SIGNED) {
-                        throw new SecurityException("Jar file is modified : " + modFile);
-                    }
-                }
-            }
-        }
 
         RestoreChatLinks.init();
 
@@ -76,7 +64,7 @@ public class RestoreChatLinksFabric implements ModInitializer {
             if (FabricLoader.getInstance().isModLoaded("fabric-api")) {
                 LOGGER.error("Installed fabric-api does not meet min requirement, update Fabric or use -Drcl.loadLegacyMixin=true");
             } else {
-                LOGGER.error("Limited support for using non fabric-api version: \"-Drcl.loadLegacyMixin=true\"");
+                LOGGER.error("For using non fabric-api version: \"-Drcl.loadLegacyMixin=true\"");
             }
         }
     }
@@ -104,6 +92,9 @@ public class RestoreChatLinksFabric implements ModInitializer {
             text = ChatHooks.processMessage(text);
             // "emulate" net.minecraft.client.network.message.MessageHandler.processChatMessageInternal
             // to preserve signing information
+            if (signedMessage == null) {
+                signedMessage = SignedMessage.ofUnsigned(gameProfile.getId(), text.getString());
+            }
             final MessageTrustStatus status = MessageTrustStatus.getStatus(signedMessage, text, instant);
             client.inGameHud.getChatHud().addMessage(text, signedMessage.signature(), status.createIndicator(signedMessage));
             client.getNarratorManager().narrate(parameters.applyNarrationDecoration(signedMessage.getContent()));
@@ -143,10 +134,10 @@ public class RestoreChatLinksFabric implements ModInitializer {
             if (container != null) {
                 final ModOrigin origin = container.getOrigin();
                 if (origin.getKind() == ModOrigin.Kind.PATH) {
-                    final File modFile = origin.getPaths().get(0).toFile();
-                    boolean isValid = RestoreChatLinks.validJarSignature(modFile);
-                    if (!isValid && IS_SIGNED) {
-                        throw new SecurityException("Jar file is modified : " + modFile);
+                    final Path modFile = origin.getPaths().get(0);
+                    if (IS_SIGNED) {
+                        JarValidator validator = JarValidator.of(modFile).validate();
+                        validator.throwIfInvalid(MOD_SIGNATURE);
                     }
                 }
             }

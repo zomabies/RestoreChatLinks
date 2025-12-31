@@ -9,8 +9,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,16 +24,15 @@ public class RCLMixinPlugin implements IMixinConfigPlugin {
     public static final Supplier<Boolean> HAS_CHAT_HEADS = () -> FabricLoader.getInstance().isModLoaded("chat_heads");
 
     @Nullable
-    @SuppressWarnings("removal")
-    public static final Boolean LOAD_LEGACY_IMPL = AccessController.doPrivileged(
-            (PrivilegedAction<Boolean>) () -> {
+    public static final Boolean LOAD_LEGACY_IMPL = ((Supplier<Boolean>)
+            () -> {
                 String rclProperty = System.getProperty("rcl.loadLegacyMixin");
                 if (rclProperty == null) {
                     return null;
                 }
                 return Boolean.getBoolean("rcl.loadLegacyMixin");
             }
-    );
+    ).get();
 
     private static final Map<String, Supplier<Boolean>> CONDITIONS = ImmutableMap.of(
             "restorechatlinks.fabric.mixin.MixinMessageHandler", () -> {
