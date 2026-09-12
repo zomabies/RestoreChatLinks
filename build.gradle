@@ -7,15 +7,8 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath group: 'architectury-plugin', name: 'architectury-plugin.gradle.plugin', version: '3.4-SNAPSHOT', changing: true
-        classpath group: 'dev.architectury', name: 'architectury-loom', version: '1.10-SNAPSHOT', changing: true
-    }
-    // manually bump transformer version as latest architectury plugin haven't upgrade its version
-    // with this fix https://github.com/architectury/architectury-transformer/pull/25
-    configurations.configureEach {
-        resolutionStrategy {
-            force 'dev.architectury:architectury-transformer:5.2.88'
-        }
+        classpath group: 'architectury-plugin', name: 'architectury-plugin.gradle.plugin', version: '3.5-SNAPSHOT', changing: true
+        classpath group: 'dev.architectury', name: 'architectury-loom', version: '1.17-SNAPSHOT', changing: true
     }
 }
 import org.apache.tools.ant.filters.ReplaceTokens
@@ -51,7 +44,7 @@ allprojects {
     apply plugin: "architectury-plugin"
     apply plugin: "maven-publish"
 
-    archivesBaseName = rootProject.archives_base_name
+    base.archivesName = rootProject.archives_base_name
     version = rootProject.mod_version
     group = rootProject.maven_group
 
@@ -61,14 +54,6 @@ allprojects {
         // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
         // See https://docs.gradle.org/current/userguide/declaring_repositories.html
         // for more information about repositories.
-    }
-
-    // manually bump transformer version as latest architectury plugin haven't upgrade its version
-    // with this fix https://github.com/architectury/architectury-transformer/pull/25
-    configurations.configureEach {
-        resolutionStrategy {
-            force 'dev.architectury:architectury-transformer:5.2.88'
-        }
     }
 
     tasks.withType(JavaCompile) {

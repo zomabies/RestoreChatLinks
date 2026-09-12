@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "7.1.2"
+    id "com.gradleup.shadow" version "8.3.11"
 }
 
 architectury {
@@ -9,7 +9,8 @@ architectury {
 
 loom {
     //accessWidenerPath = project(":common").loom.accessWidenerPath
-    mixin.defaultRefmapName = "${archivesBaseName.toLowerCase()}-refmap.json"
+    mixin.useLegacyMixinAp = true
+    mixin.defaultRefmapName = "${base.archivesName.get().toLowerCase()}-refmap.json"
 
     forge {
         //convertAccessWideners = true

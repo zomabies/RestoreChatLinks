@@ -4,7 +4,8 @@ architectury {
 
 loom {
     //accessWidenerPath = file("src/main/resources/restorechatlinks.accesswidener")
-    mixin.defaultRefmapName = "${archivesBaseName.toLowerCase()}-common-refmap.json"
+    mixin.useLegacyMixinAp = true
+    mixin.defaultRefmapName = "${base.archivesName.get().toLowerCase()}-common-refmap.json"
 
 }
 
