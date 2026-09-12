@@ -8,12 +8,12 @@
 
 package restorechatlinks;
 
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextColor;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import restorechatlinks.config.RCLConfig;
 
 import java.net.URI;
@@ -29,15 +29,15 @@ public class ChatLink {
             "((?:[a-z0-9]{2,}:\\/\\/)?(?:(?:[0-9]{1,3}\\.){3}[0-9]{1,3}|(?:[-\\w_]{1,}\\.[a-z]{2,}?))(?::[0-9]{1,5})?.*?(?=[!\"\u00A7 \n]|$))",
             Pattern.CASE_INSENSITIVE);
 
-    public static Text newChatWithLinks(String string) {
+    public static Component newChatWithLinks(String string) {
         return newChatWithLinks(string, true, false);
     }
 
-    public static Text newChatWithLinks(String string, boolean allowMissingHeader, boolean color) {
+    public static Component newChatWithLinks(String string, boolean allowMissingHeader, boolean color) {
         // Includes ipv4 and domain pattern
         // Matches an ip (xx.xxx.xx.xxx) or a domain (something.com) with or
         // without a protocol or path.
-        MutableText ichat = null;
+        MutableComponent ichat = null;
         Matcher matcher = URL_PATTERN.matcher(string);
         int lastEnd = 0;
 
@@ -50,13 +50,13 @@ public class ChatLink {
             String part = string.substring(lastEnd, start);
             if (part.length() > 0) {
                 if (ichat == null)
-                    ichat = Text.literal(part);
+                    ichat = Component.literal(part);
                 else
                     ichat.append(part);
             }
             lastEnd = end;
             String url = string.substring(start, end);
-            MutableText link = Text.literal(url);
+            MutableComponent link = Component.literal(url);
             URI uri = null;
 
             try {
@@ -64,7 +64,7 @@ public class ChatLink {
                 if ((new URI(url)).getScheme() == null) {
                     if (!allowMissingHeader) {
                         if (ichat == null)
-                            ichat = Text.literal(url);
+                            ichat = Component.literal(url);
                         else
                             ichat.append(url);
                         continue;
@@ -74,7 +74,7 @@ public class ChatLink {
                 uri = new URI(url);
             } catch (URISyntaxException e) {
                 // Bad syntax bail out!
-                if (ichat == null) ichat = Text.literal(url);
+                if (ichat == null) ichat = Component.literal(url);
                 else ichat.append(url);
                 continue;
             }
@@ -83,23 +83,23 @@ public class ChatLink {
             Style style = link.getStyle().withClickEvent(click);
 
             if (RCLConfig.underlineLink) {
-                style = style.withUnderline(true);
+                style = style.withUnderlined(true);
             }
             if (RCLConfig.colorLink) {
-                style = style.withColor(TextColor.fromFormatting(Formatting.byName(RCLConfig.colorName)));
+                style = style.withColor(TextColor.fromLegacyFormat(ChatFormatting.getByName(RCLConfig.colorName)));
             }
             link.setStyle(style);
             if (ichat == null)
-                ichat = Text.literal("");
+                ichat = Component.literal("");
             ichat.append(link);
         }
 
         // Append the rest of the message.
         String end = string.substring(lastEnd);
         if (ichat == null)
-            ichat = Text.literal(end);
+            ichat = Component.literal(end);
         else if (end.length() > 0)
-            ichat.append(Text.literal(string.substring(lastEnd)));
+            ichat.append(Component.literal(string.substring(lastEnd)));
         return ichat;
     }
 

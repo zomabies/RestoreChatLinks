@@ -8,13 +8,13 @@ import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.VersionParsingException;
 import net.fabricmc.loader.api.metadata.ModOrigin;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.message.MessageTrustStatus;
-import net.minecraft.client.session.report.log.ChatLog;
-import net.minecraft.client.session.report.log.ReceivedMessage;
-import net.minecraft.network.message.MessageType;
-import net.minecraft.network.message.SignedMessage;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.chat.ChatLog;
+import net.minecraft.client.multiplayer.chat.ChatTrustLevel;
+import net.minecraft.client.multiplayer.chat.LoggedChatMessage;
+import net.minecraft.network.chat.ChatType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.PlayerChatMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -31,7 +31,7 @@ public class RestoreChatLinksFabric implements ModInitializer {
     public static final String MOD_SIGNATURE = "@signature@";
     public static final boolean IS_SIGNED = !MOD_SIGNATURE.replace('@', '\0').contains("signature");
 
-    private static MinecraftClient client = null;
+    private static Minecraft client = null;
     private static final Logger LOGGER = LogManager.getLogger(RestoreChatLinksFabric.class);
 
     @Override
@@ -53,7 +53,7 @@ public class RestoreChatLinksFabric implements ModInitializer {
             if (Boolean.TRUE.equals(RCLMixinPlugin.LOAD_LEGACY_IMPL)) {
                 LOGGER.warn("\"rcl.loadLegacyMixin\" is incompatible with fabric-api version, skipping event register");
             } else {
-                client = MinecraftClient.getInstance();
+                client = Minecraft.getInstance();
                 // new API
                 ClientReceiveMessageEvents.MODIFY_GAME.register(RestoreChatLinksFabric::onModifiableGameMessage);
                 ClientReceiveMessageEvents.ALLOW_CHAT.register(RestoreChatLinksFabric::onAllowChatMessage);
@@ -70,20 +70,20 @@ public class RestoreChatLinksFabric implements ModInitializer {
     }
 
     private static boolean onAllowChatMessage(
-            Text text,
-            @Nullable SignedMessage signedMessage,
+            Component text,
+            @Nullable PlayerChatMessage signedMessage,
             @Nullable GameProfile gameProfile,
-            MessageType.Parameters parameters,
+            ChatType.Bound parameters,
             Instant instant) {
 
         // Profiless message ("/say" in command block)
         if (signedMessage == null && gameProfile == null) {
             // "emulate" net.minecraft.client.network.message.MessageHandler.onProfilelessMessage
-            Text a = ChatHooks.processMessage(text);
-            client.inGameHud.getChatHud().addMessage(a);
-            client.getNarratorManager().narrateChatMessage(a);
-            ChatLog chatLog = client.getAbuseReportContext().getChatLog();
-            chatLog.add(ReceivedMessage.of(a, instant));
+            Component a = ChatHooks.processMessage(text);
+            client.gui.getChat().addMessage(a);
+            client.getNarrator().sayChat(a);
+            ChatLog chatLog = client.getReportingContext().chatLog();
+            chatLog.push(LoggedChatMessage.system(a, instant));
 
             return false;
         }
@@ -93,20 +93,20 @@ public class RestoreChatLinksFabric implements ModInitializer {
             // "emulate" net.minecraft.client.network.message.MessageHandler.processChatMessageInternal
             // to preserve signing information
             if (signedMessage == null) {
-                signedMessage = SignedMessage.ofUnsigned(gameProfile.getId(), text.getString());
+                signedMessage = PlayerChatMessage.unsigned(gameProfile.getId(), text.getString());
             }
-            final MessageTrustStatus status = MessageTrustStatus.getStatus(signedMessage, text, instant);
-            client.inGameHud.getChatHud().addMessage(text, signedMessage.signature(), status.createIndicator(signedMessage));
-            client.getNarratorManager().narrate(parameters.applyNarrationDecoration(signedMessage.getContent()));
+            final ChatTrustLevel status = ChatTrustLevel.evaluate(signedMessage, text, instant);
+            client.gui.getChat().addMessage(text, signedMessage.signature(), status.createTag(signedMessage));
+            client.getNarrator().sayNow(parameters.decorateNarration(signedMessage.decoratedContent()));
 
-            ChatLog chatLog = client.getAbuseReportContext().getChatLog();
-            chatLog.add(ReceivedMessage.of(gameProfile, signedMessage, status));
+            ChatLog chatLog = client.getReportingContext().chatLog();
+            chatLog.push(LoggedChatMessage.player(gameProfile, signedMessage, status));
             return false;
         }
         return true;
     }
 
-    private static Text onModifiableGameMessage(Text message, boolean overlay) {
+    private static Component onModifiableGameMessage(Component message, boolean overlay) {
         return !overlay ? ChatHooks.processMessage(message) : message;
     }
 

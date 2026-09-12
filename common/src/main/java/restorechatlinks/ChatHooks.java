@@ -1,13 +1,13 @@
 package restorechatlinks;
 
-import net.minecraft.text.MutableText;
-import net.minecraft.text.PlainTextContent;
-import net.minecraft.text.StringVisitable;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextContent;
-import net.minecraft.text.TextVisitFactory;
-import net.minecraft.text.TranslatableTextContent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentContents;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.contents.PlainTextContents;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.util.StringDecomposer;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -31,39 +31,39 @@ public class ChatHooks {
                     "commands.message.display.incoming")
     );
 
-    public static Text onSystemMessage(Text message) {
-        Text result = processMessage(message);
+    public static Component onSystemMessage(Component message) {
+        Component result = processMessage(message);
         return result;
     }
 
-    public static Text processMessage(final Text message) {
+    public static Component processMessage(final Component message) {
 
-        final TextContent textContent = message.getContent();
+        final ComponentContents textContent = message.getContents();
 
         logMessage(() -> Pair.of("Before: {}", message.toString()));
 
-        if (textContent instanceof PlainTextContent) {
-            Text literalText = message;
-            AtomicReference<MutableText> modifiedText = new AtomicReference<>();
+        if (textContent instanceof PlainTextContents) {
+            Component literalText = message;
+            AtomicReference<MutableComponent> modifiedText = new AtomicReference<>();
 
             if (RCLConfig.convertFormattingCodes) {
                 // some chat modification returns formatting code, which introduces issues.
-                Text styled = convertToStyled(message);
+                Component styled = convertToStyled(message);
                 literalText = styled;
                 logMessage(() -> Pair.of("Styled: {}", styled.toString()));
             }
 
             // Prevent text siblings shifted to front when TextContent is "EMPTY"
             // It skips itself when using visitor methods.
-            if (textContent == PlainTextContent.EMPTY) {
-                modifiedText.set(Text.empty());
+            if (textContent == PlainTextContents.EMPTY) {
+                modifiedText.set(Component.empty());
             }
 
             literalText.visit((style, asString) -> {
                 if (modifiedText.get() == null) {
-                    modifiedText.set(((MutableText) ChatLink.newChatWithLinks(asString)).setStyle(style));
+                    modifiedText.set(((MutableComponent) ChatLink.newChatWithLinks(asString)).setStyle(style));
                 } else {
-                    modifiedText.get().append(((MutableText) ChatLink.newChatWithLinks(asString)).setStyle(style));
+                    modifiedText.get().append(((MutableComponent) ChatLink.newChatWithLinks(asString)).setStyle(style));
                 }
                 return Optional.empty();
             }, Style.EMPTY);
@@ -72,15 +72,15 @@ public class ChatHooks {
             return modifiedText.get();
         }
 
-        if (textContent instanceof TranslatableTextContent translatableText
+        if (textContent instanceof TranslatableContents translatableText
                 && CHAT_TRANSLATION_TYPE.contains(translatableText.getKey())) {
 
-            final MutableText modified = copyTranslatableText(translatableText).setStyle(message.getStyle());
+            final MutableComponent modified = copyTranslatableText(translatableText).setStyle(message.getStyle());
             modified.getSiblings().addAll(message.getSiblings());
             final Object[] args = translatableText.getArgs();
             for (int i = 0; i < args.length; i++) {
-                if (args[i] instanceof Text txt) {
-                    args[i] = ((MutableText) ChatLink.newChatWithLinks(txt.getString())).setStyle(txt.getStyle());
+                if (args[i] instanceof Component txt) {
+                    args[i] = ((MutableComponent) ChatLink.newChatWithLinks(txt.getString())).setStyle(txt.getStyle());
                 }
                 if (args[i] instanceof String str) {
                     args[i] = ChatLink.newChatWithLinks(str);
@@ -96,11 +96,11 @@ public class ChatHooks {
     /**
      * Creates a copy without updateTranslations called. Used for multiplayer
      **/
-    public static MutableText copyTranslatableText(TranslatableTextContent translated) {
+    public static MutableComponent copyTranslatableText(TranslatableContents translated) {
         // chat HUD uses cached "translation", build by "TranslatableTextContent#updateTranslation".
         // MessageHandler#processChatMessageInternal => getStatus => MessageTrustStatus.getStatus (update in multiplayer)
         // manual editing using getArgs does not update the cache
-        return Text.translatable(translated.getKey(), translated.getArgs());
+        return Component.translatable(translated.getKey(), translated.getArgs());
     }
 
     /**
@@ -109,12 +109,12 @@ public class ChatHooks {
      *
      * @return Styled string without '§' literal
      */
-    public static Text convertToStyled(StringVisitable inlineFormatText) {
+    public static Component convertToStyled(FormattedText inlineFormatText) {
         StringBuilder stringBuilder = new StringBuilder();
-        MutableObject<MutableText> mutableTextWrapper = new MutableObject<>(Text.literal(""));
+        MutableObject<MutableComponent> mutableTextWrapper = new MutableObject<>(Component.literal(""));
         MutableObject<Style> prevStyle = new MutableObject<>();
 
-        TextVisitFactory.visitFormatted(inlineFormatText, Style.EMPTY, (int index, Style currentStyle, int codePoint) -> {
+        StringDecomposer.iterateFormatted(inlineFormatText, Style.EMPTY, (int index, Style currentStyle, int codePoint) -> {
 
             if (prevStyle.getValue() == null) {
                 prevStyle.setValue(currentStyle);
@@ -131,11 +131,11 @@ public class ChatHooks {
         return mutableTextWrapper.getValue();
     }
 
-    private static void updateTextAndStyle(StringBuilder stringBuilder, MutableObject<MutableText> mutableTextWrapper, MutableObject<Style> prevStyle, Style currentStyle) {
+    private static void updateTextAndStyle(StringBuilder stringBuilder, MutableObject<MutableComponent> mutableTextWrapper, MutableObject<Style> prevStyle, Style currentStyle) {
         if (mutableTextWrapper.getValue() == null) {
-            mutableTextWrapper.setValue(Text.literal(stringBuilder.toString()).setStyle(prevStyle.getValue()));
+            mutableTextWrapper.setValue(Component.literal(stringBuilder.toString()).setStyle(prevStyle.getValue()));
         } else {
-            mutableTextWrapper.getValue().append(Text.literal(stringBuilder.toString()).setStyle(prevStyle.getValue()));
+            mutableTextWrapper.getValue().append(Component.literal(stringBuilder.toString()).setStyle(prevStyle.getValue()));
         }
         stringBuilder.delete(0, stringBuilder.length());
         prevStyle.setValue(currentStyle);
