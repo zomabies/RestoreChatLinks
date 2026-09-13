@@ -1,5 +1,6 @@
 package restorechatlinks.neoforge;
 
+import net.neoforged.fml.jarcontents.JarContents;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.LoadingModList;
 import net.neoforged.neoforgespi.language.IModFileInfo;
@@ -16,61 +17,12 @@ class FMLCompatibility {
 
     private static final Logger LOGGER = LogManager.getLogger(FMLCompatibility.class);
 
-    private static boolean isProduction;
-    private static final boolean hasSuccessInitialized;
-    private static LoadingModList loadingModList;
-
-    static {
-        hasSuccessInitialized = hasNewFMLRewrite() && tryInitialize();
-    }
-
-    private static boolean tryInitialize() {
-        try {
-            Class<FMLLoader> fmlLoaderCls = FMLLoader.class;
-            Method getCurrentMethod = fmlLoaderCls.getMethod("getCurrent");
-            Method getLoadingModListMethod = fmlLoaderCls.getMethod("getLoadingModList");
-            Method isProductionMethod = fmlLoaderCls.getMethod("isProduction");
-
-            FMLLoader currentLoader = (FMLLoader) getCurrentMethod.invoke(null);
-            loadingModList = (LoadingModList) getLoadingModListMethod.invoke(currentLoader);
-            isProduction = ((boolean) isProductionMethod.invoke(currentLoader));
-            return true;
-        } catch (NoSuchMethodException e) {
-            LOGGER.error("FML method not found", e);
-            return false;
-        } catch (InvocationTargetException | IllegalAccessException | SecurityException e) {
-            LOGGER.error("Unable to get FML related instances", e);
-            return false;
-        }
-    }
-
-    public static boolean isProduction() {
-        if (hasSuccessInitialized) {
-            return isProduction;
-        } else {
-            return FMLLoader.isProduction();
-        }
-    }
-
-    public static boolean hasNewFMLRewrite() {
-        try {
-            Class.forName("net.neoforged.fml.jarcontents.JarContents");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
+    private final static LoadingModList loadingModList = FMLLoader.getCurrent().getLoadingModList();
 
     public static JarFile getUnderlyingJarFileFromFML(String modId) {
-        if (!hasSuccessInitialized) {
-            return null;
-        }
         try {
-            Class<IModFile> iModFileCls = IModFile.class;
-            Method getContents = iModFileCls.getMethod("getContents"); // JarContents
-
             IModFileInfo modFileInfo = loadingModList.getModFileById(modId);
-            Object jarContents = getContents.invoke(modFileInfo.getFile());
+            JarContents jarContents = modFileInfo.getFile().getContents();
 
             Class<?> jarFileContentCls = Class.forName("net.neoforged.fml.jarcontents.JarFileContents");
 
@@ -85,9 +37,9 @@ class FMLCompatibility {
                     return null;
                 }
             }
-        } catch (ClassNotFoundException | NoSuchMethodException e) {
+        } catch (ClassNotFoundException e) {
             LOGGER.error("JarFileContent not found?", e);
-        } catch (InvocationTargetException | IllegalAccessException | SecurityException e) {
+        } catch (IllegalAccessException | SecurityException e) {
             LOGGER.error("Error accessing JarFileContents", e);
         }
         return null;

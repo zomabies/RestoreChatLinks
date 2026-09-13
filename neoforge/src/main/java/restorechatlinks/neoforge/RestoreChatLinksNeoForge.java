@@ -1,6 +1,5 @@
 package restorechatlinks.neoforge;
 
-import cpw.mods.jarhandling.SecureJar;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -14,13 +13,10 @@ import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforgespi.locating.IModFile;
 import restorechatlinks.ChatHooks;
 import restorechatlinks.JarValidator;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.neoforge.config.Config;
-
-import java.security.CodeSigner;
 
 @Mod(RestoreChatLinks.MOD_ID)
 public class RestoreChatLinksNeoForge {
@@ -28,7 +24,7 @@ public class RestoreChatLinksNeoForge {
     public static final String MOD_SIGNATURE = "@signature@";
     public static final boolean IS_SIGNED = !MOD_SIGNATURE.replace('@', '\0').contains("signature");
 
-    private static final boolean IS_PRODUCTION = FMLCompatibility.isProduction();
+    private static final boolean IS_PRODUCTION = FMLLoader.getCurrent().isProduction();
 
     public RestoreChatLinksNeoForge(IEventBus modEventBus, ModContainer modContainer) {
         if (IS_SIGNED && IS_PRODUCTION) {
@@ -78,47 +74,10 @@ public class RestoreChatLinksNeoForge {
     }
 
     static {
-        boolean hasNewFML = FMLCompatibility.hasNewFMLRewrite();
-        if (IS_PRODUCTION && hasNewFML) {
+        if (IS_SIGNED && IS_PRODUCTION) {
             JarValidator.ofExisting(FMLCompatibility.getUnderlyingJarFileFromFML(RestoreChatLinks.MOD_ID))
                     .validate()
                     .throwIfInvalid(MOD_SIGNATURE);
-        }
-
-
-        if (!hasNewFML) {
-
-            final IModFile modFile = ModList.get().getModFileById(RestoreChatLinks.MOD_ID).getFile();
-
-            SecureJar.Status status = IS_SIGNED
-                    ? IntegrityVerifier.selfVerify(modFile, FMLLoader.isProduction())
-                    : SecureJar.Status.NONE;
-
-            switch (status) {
-
-                case VERIFIED: {
-                    if (FMLLoader.isProduction()) {
-                        CodeSigner[] signers = modFile.getSecureJar().getManifestSigners();
-                        boolean match = JarValidator.hasSignersMatch(MOD_SIGNATURE, signers);
-                        if (match) {
-                            //System.out.println("Success verify in static constructor!");
-                        } else {
-                            throw new SecurityException("JAR fingerprint not expected");
-                        }
-                    }
-                    break;
-                }
-                case NONE:
-                case INVALID:
-                case UNVERIFIED:
-                default: {
-                    if (IS_SIGNED && FMLLoader.isProduction()) {
-                        throw new SecurityException("JAR file is tampered! " + modFile.getFileName());
-                    } else {
-                        System.out.println("DEV mode, ignoring jar sign status");
-                    }
-                }
-            }
         }
     }
 

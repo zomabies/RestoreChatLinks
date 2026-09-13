@@ -11,6 +11,7 @@ import net.fabricmc.loader.api.metadata.ModOrigin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.chat.ChatLog;
 import net.minecraft.client.multiplayer.chat.ChatTrustLevel;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
 import net.minecraft.client.multiplayer.chat.LoggedChatMessage;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
@@ -80,8 +81,8 @@ public class RestoreChatLinksFabric implements ModInitializer {
         if (signedMessage == null && gameProfile == null) {
             // "emulate" net.minecraft.client.network.message.MessageHandler.onProfilelessMessage
             Component a = ChatHooks.processMessage(text);
-            client.gui.getChat().addMessage(a);
-            client.getNarrator().sayChat(a);
+            client.gui.getChat().addPlayerMessage(a, null, GuiMessageTag.system());
+            client.getNarrator().sayChatQueued(a);
             ChatLog chatLog = client.getReportingContext().chatLog();
             chatLog.push(LoggedChatMessage.system(a, instant));
 
@@ -93,11 +94,11 @@ public class RestoreChatLinksFabric implements ModInitializer {
             // "emulate" net.minecraft.client.network.message.MessageHandler.processChatMessageInternal
             // to preserve signing information
             if (signedMessage == null) {
-                signedMessage = PlayerChatMessage.unsigned(gameProfile.getId(), text.getString());
+                signedMessage = PlayerChatMessage.unsigned(gameProfile.id(), text.getString());
             }
             final ChatTrustLevel status = ChatTrustLevel.evaluate(signedMessage, text, instant);
-            client.gui.getChat().addMessage(text, signedMessage.signature(), status.createTag(signedMessage));
-            client.getNarrator().sayNow(parameters.decorateNarration(signedMessage.decoratedContent()));
+            client.gui.getChat().addPlayerMessage(text, signedMessage.signature(), status.createTag(signedMessage));
+            client.getNarrator().sayChatQueued(parameters.decorateNarration(signedMessage.decoratedContent()));
 
             ChatLog chatLog = client.getReportingContext().chatLog();
             chatLog.push(LoggedChatMessage.player(gameProfile, signedMessage, status));

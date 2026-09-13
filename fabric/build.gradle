@@ -9,8 +9,8 @@ architectury {
 
 loom {
     //accessWidenerPath = project(":common").loom.accessWidenerPath
-    mixin.useLegacyMixinAp = true
-    mixin.defaultRefmapName = "${base.archivesName.get().toLowerCase()}-refmap.json"
+//    mixin.useLegacyMixinAp = true
+//    mixin.defaultRefmapName = "${base.archivesName.get().toLowerCase()}-refmap.json"
 }
 
 configurations {
@@ -36,17 +36,17 @@ repositories {
 }
 
 dependencies {
-    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+    implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    api "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
     // Remove the next line if you don't want to depend on the API
     // modApi "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
 
-    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:21.5.1"
+    api "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:26.1.5"
 
-    modImplementation "curse.maven:configured-457570:6417462"
-    modRuntimeOnly "com.terraformersmc:modmenu:14.0.0-rc.2"
+    // runtimeOnly "curse.maven:configured-457570:7943179"
+    runtimeOnly "com.terraformersmc:modmenu:18.0.1"
 
-    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    common(project(path: ":common")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }
 }
 
@@ -58,19 +58,12 @@ processResources {
     }
 }
 
-shadowJar {
-    exclude "architectury.common.json"
-
-    configurations = [project.configurations.shadowCommon]
-    archiveClassifier = "dev-shadow"
-}
-
-remapJar {
+/*remapJar {
     injectAccessWidener = true
     inputFile.set shadowJar.archiveFile
     dependsOn shadowJar
     archiveClassifier = null
-}
+}*/
 
 jar {
     manifest {
@@ -86,6 +79,25 @@ jar {
     archiveClassifier = "dev"
 }
 
+shadowJar {
+    exclude "architectury.common.json"
+    dependsOn(jar)
+
+    doFirst {
+        manifest {
+            from(zipTree(jar.archiveFile).find { it.name.equals("MANIFEST.MF") }) // Keep manifest with loom modification
+        }
+    }
+
+    mainSpec.sourcePaths.clear()       // Remove default source set inclusion
+    from(zipTree(jar.archiveFile))     // Unpack jar output (preserves Loom modifications)
+
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = null
+}
+
+assemble.dependsOn(shadowJar) // emulate "remapJar", added by loom in obf version
+
 sourcesJar {
     def commonSources = project(":common").sourcesJar
     dependsOn commonSources
@@ -96,7 +108,7 @@ def hasSigning = SignJarExt.hasSigning(project)
 
 def signFabricJar = SignJarExt.createSignJarTask(
         project,
-        tasks.named("remapJar", net.fabricmc.loom.task.RemapJarTask),
+        tasks.named("shadowJar", com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar),
         hasSigning
 )
 signFabricJar.configure {

@@ -9,8 +9,8 @@ architectury {
 
 loom {
     //accessWidenerPath = project(":common").loom.accessWidenerPath
-    mixin.useLegacyMixinAp = true
-    mixin.defaultRefmapName = "${base.archivesName.get().toLowerCase()}-refmap.json"
+//     mixin.useLegacyMixinAp = true
+//    mixin.defaultRefmapName = "${base.archivesName.get().toLowerCase()}-refmap.json"
 
     forge {
         //convertAccessWideners = true
@@ -57,7 +57,7 @@ dependencies {
 
     // modImplementation "curse.maven:configured-457570:5105022"
 
-    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    common(project(path: ":common")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }
 }
 
@@ -69,19 +69,11 @@ processResources {
     }
 }
 
-shadowJar {
-    exclude "fabric.mod.json"
-    exclude "architectury.common.json"
-
-    configurations = [project.configurations.shadowCommon]
-    archiveClassifier = "dev-shadow"
-}
-
-remapJar {
+/*remapJar {
     inputFile.set shadowJar.archiveFile
     dependsOn shadowJar
     archiveClassifier = null
-}
+}*/
 
 jar {
     manifest {
@@ -97,6 +89,20 @@ jar {
     archiveClassifier = "dev"
 }
 
+shadowJar {
+    exclude "fabric.mod.json"
+    exclude "architectury.common.json"
+    dependsOn(jar)
+
+    mainSpec.sourcePaths.clear()   // Remove default source set inclusion
+    from(zipTree(jar.archiveFile)) // Unpack jar output (preserves Loom modifications)
+
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = null
+}
+
+assemble.dependsOn(shadowJar) // emulate "remapJar", added by loom in obf version
+
 sourcesJar {
     def commonSources = project(":common").sourcesJar
     dependsOn commonSources
@@ -107,7 +113,7 @@ def hasSigning = SignJarExt.hasSigning(project)
 
 def signForgeJar = SignJarExt.createSignJarTask(
         project,
-        tasks.named("remapJar", net.fabricmc.loom.task.RemapJarTask),
+        tasks.named("shadowJar", com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar),
         hasSigning
 )
 signForgeJar.configure {

@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import restorechatlinks.ChatHooks;
 
-@Mixin(value = ChatListener.class)
+@Mixin(ChatListener.class)
 public class MixinMessageHandler {
 
     @ModifyVariable(
