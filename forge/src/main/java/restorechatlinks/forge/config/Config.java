@@ -3,6 +3,7 @@ package restorechatlinks.forge.config;
 import net.minecraft.ChatFormatting;
 import net.minecraftforge.common.ForgeConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
+import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.config.RCLConfig;
 
 import java.util.Collection;
@@ -37,12 +38,11 @@ public class Config {
                     .comment("Enable color on link")
                     .define("colorLink", false);
 
-            final Collection<String> colorNames = ChatFormatting.getNames(true, false);
-            colorNames.remove(ChatFormatting.RESET.getName());
+            final Collection<String> colorNames = RestoreChatLinks.getBuiltInColors();
 
             colorName = builder
                     .comment("Color of the link", "Valid colors: ", String.join(", ", colorNames))
-                    .defineInList("colorName", ChatFormatting.BLUE.getName(), colorNames);
+                    .defineInList("colorName", RestoreChatLinks.serializeLegacyFormat(ChatFormatting.BLUE), colorNames);
 
             convertFormattingCodes = builder
                     .comment("Prevent link detection issues with message containing formatting codes")

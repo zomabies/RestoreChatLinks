@@ -9,6 +9,8 @@ import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.VersionParsingException;
 import net.fabricmc.loader.api.metadata.ModOrigin;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.multiplayer.chat.ChatLog;
 import net.minecraft.client.multiplayer.chat.ChatTrustLevel;
 import net.minecraft.client.multiplayer.chat.GuiMessageTag;
@@ -16,6 +18,7 @@ import net.minecraft.client.multiplayer.chat.LoggedChatMessage;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.PlayerChatMessage;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -24,8 +27,13 @@ import restorechatlinks.JarValidator;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.fabric.mixin.RCLMixinPlugin;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.invoke.VarHandle;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.function.Function;
 
 public class RestoreChatLinksFabric implements ModInitializer {
 
@@ -77,11 +85,16 @@ public class RestoreChatLinksFabric implements ModInitializer {
             ChatType.Bound parameters,
             Instant instant) {
 
+        final ChatComponent chatComponent = getChatComponent(client.gui);
+        if (chatComponent == null) {
+            return true;
+        }
+
         // Profiless message ("/say" in command block)
         if (signedMessage == null && gameProfile == null) {
             // "emulate" net.minecraft.client.network.message.MessageHandler.onProfilelessMessage
             Component a = ChatHooks.processMessage(text);
-            client.gui.getChat().addPlayerMessage(a, null, GuiMessageTag.system());
+            chatComponent.addPlayerMessage(a, null, GuiMessageTag.system());
             client.getNarrator().sayChatQueued(a);
             ChatLog chatLog = client.getReportingContext().chatLog();
             chatLog.push(LoggedChatMessage.system(a, instant));
@@ -97,7 +110,7 @@ public class RestoreChatLinksFabric implements ModInitializer {
                 signedMessage = PlayerChatMessage.unsigned(gameProfile.id(), text.getString());
             }
             final ChatTrustLevel status = ChatTrustLevel.evaluate(signedMessage, text, instant);
-            client.gui.getChat().addPlayerMessage(text, signedMessage.signature(), status.createTag(signedMessage));
+            chatComponent.addPlayerMessage(text, signedMessage.signature(), status.createTag(signedMessage));
             client.getNarrator().sayChatQueued(parameters.decorateNarration(signedMessage.decoratedContent()));
 
             ChatLog chatLog = client.getReportingContext().chatLog();
@@ -127,6 +140,61 @@ public class RestoreChatLinksFabric implements ModInitializer {
         } catch (VersionParsingException ignore) {
         }
         return false;
+    }
+
+    private static ChatComponent getChatComponent(Gui gui) {
+        class Holder {
+            private static final VarHandle VH_Gui$hud;
+            private static final MethodHandle MH_Hud$getChat;
+            private static final Function<Gui, ChatComponent> CHAT_COMPONENT_GETTER;
+
+            static {
+                Function<Gui, ChatComponent> getter = null;
+                ImmutablePair<VarHandle, MethodHandle> pair = ImmutablePair.nullPair();
+                try {
+                    getter = Gui::getChat;
+                } catch (NoSuchMethodError e) {
+                    LOGGER.debug("26.1 Gui::getChat not found", e);
+                    pair = checkAndInitMH_26_2();
+                }
+                VH_Gui$hud = pair.left;
+                MH_Hud$getChat = pair.right;
+                if (VH_Gui$hud != null && MH_Hud$getChat != null) {
+                    getter = Holder::viaInvoke;
+                }
+                CHAT_COMPONENT_GETTER = getter;
+            }
+
+            private static ChatComponent viaInvoke(Gui gui) {
+                try {
+                    return (ChatComponent) MH_Hud$getChat.invokeExact(VH_Gui$hud.get(gui));
+                } catch (Throwable e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            private static ImmutablePair<VarHandle, MethodHandle> checkAndInitMH_26_2() {
+                VarHandle hudVH = null;
+                MethodHandle getChatMh = null;
+                try {
+                    MethodHandles.Lookup lookup = MethodHandles.lookup();
+                    Class<?> hudCls = Class.forName("net.minecraft.client.gui.Hud");
+
+                    hudVH = lookup.findVarHandle(Gui.class, "hud", hudCls);
+                    getChatMh = lookup.findVirtual(hudCls, "getChat", MethodType.methodType(ChatComponent.class));
+
+                    // ((Object) hud).getChat()
+                    getChatMh = getChatMh.asType(getChatMh.type().changeParameterType(0, Object.class));
+                } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException | SecurityException |
+                         NoSuchMethodException ex) {
+                    LOGGER.error("Player chat parsing will not work!");
+                    LOGGER.error("Unable to get lookup", ex);
+                }
+                return ImmutablePair.of(hudVH, getChatMh);
+            }
+        }
+
+        return Holder.CHAT_COMPONENT_GETTER != null ? Holder.CHAT_COMPONENT_GETTER.apply(gui) : null;
     }
 
     static {

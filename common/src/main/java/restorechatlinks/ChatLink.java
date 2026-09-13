@@ -8,7 +8,6 @@
 
 package restorechatlinks;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -86,7 +85,7 @@ public class ChatLink {
                 style = style.withUnderlined(true);
             }
             if (RCLConfig.colorLink) {
-                style = style.withColor(TextColor.fromLegacyFormat(ChatFormatting.getByName(RCLConfig.colorName)));
+                style = style.withColor(TextColor.parseColor(RCLConfig.colorName).getOrThrow());
             }
             link.setStyle(style);
             if (ichat == null)
