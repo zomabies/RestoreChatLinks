@@ -136,8 +136,7 @@ public class RestoreChatLinksFabric implements ModInitializer {
                 if (origin.getKind() == ModOrigin.Kind.PATH) {
                     final Path modFile = origin.getPaths().get(0);
                     if (IS_SIGNED) {
-                        JarValidator validator = JarValidator.of(modFile).validate();
-                        validator.throwIfInvalid(MOD_SIGNATURE);
+                        JarValidator.of(modFile).validate().throwIfInvalid(MOD_SIGNATURE);
                     }
                 }
             }
