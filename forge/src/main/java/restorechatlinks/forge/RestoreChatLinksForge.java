@@ -29,7 +29,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
-import java.security.CodeSigner;
 import java.util.function.Supplier;
 
 @Mod(RestoreChatLinks.MOD_ID)
@@ -179,30 +178,8 @@ public class RestoreChatLinksForge {
                 ? IntegrityVerifier.selfVerify(modFile, FMLLoader.isProduction())
                 : SecureJar.Status.NONE;
 
-        switch (status) {
-
-            case VERIFIED: {
-                if (FMLLoader.isProduction()) {
-                    CodeSigner[] signers = modFile.getSecureJar().getManifestSigners();
-                    boolean match = JarValidator.hasSignersMatch(MOD_SIGNATURE, signers);
-                    if (match) {
-                        //System.out.println("Success verify in static constructor!");
-                    } else {
-                        throw new SecurityException("JAR fingerprint not expected");
-                    }
-                }
-                break;
-            }
-            case NONE:
-            case INVALID:
-            case UNVERIFIED:
-            default: {
-                if (IS_SIGNED && FMLLoader.isProduction()) {
-                    throw new SecurityException("JAR file is tampered! " + modFile.getFileName());
-                } else {
-                    System.out.println("DEV mode, ignoring jar sign status");
-                }
-            }
+        if (IS_SIGNED) {
+            IntegrityVerifier.handleStatus(status, modFile);
         }
 
         ImmutablePair<MethodHandle, MethodHandle> result = checkAndInitMH_1_20_6();
