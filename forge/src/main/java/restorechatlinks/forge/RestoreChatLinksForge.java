@@ -18,8 +18,6 @@ import restorechatlinks.JarValidator;
 import restorechatlinks.RestoreChatLinks;
 import restorechatlinks.forge.config.Config;
 
-import java.security.CodeSigner;
-
 @Mod(RestoreChatLinks.MOD_ID)
 public class RestoreChatLinksForge {
 
@@ -81,30 +79,8 @@ public class RestoreChatLinksForge {
                 ? IntegrityVerifier.selfVerify(modFile, FMLLoader.isProduction())
                 : SecureJar.Status.NONE;
 
-        switch (status) {
-
-            case VERIFIED: {
-                if (FMLLoader.isProduction()) {
-                    CodeSigner[] signers = modFile.getSecureJar().getManifestSigners();
-                    boolean match = JarValidator.hasSignersMatch(MOD_SIGNATURE, signers);
-                    if (match) {
-                        //System.out.println("Success verify in static constructor!");
-                    } else {
-                        throw new SecurityException("JAR fingerprint not expected");
-                    }
-                }
-                break;
-            }
-            case NONE:
-            case INVALID:
-            case UNVERIFIED:
-            default: {
-                if (IS_SIGNED && FMLLoader.isProduction()) {
-                    throw new SecurityException("JAR file is tampered! " + modFile.getFileName());
-                } else {
-                    System.out.println("DEV mode, ignoring jar sign status");
-                }
-            }
+        if (IS_SIGNED) {
+            IntegrityVerifier.handleStatus(status, modFile);
         }
     }
 

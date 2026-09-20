@@ -6,24 +6,33 @@ import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import restorechatlinks.JarValidator;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.CodeSigner;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.jar.Attributes;
+import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipFile;
 
 public final class IntegrityVerifier {
 
     private static final Logger LOGGER = LogManager.getLogger("RCL-Verifier");
+    private static final boolean SKIP_SJH_VERIFY = Boolean.getBoolean("rcl.skipSjhVerify");
 
     static Status selfVerify(IModFile modFile, boolean isProduction) {
-
+        if (SKIP_SJH_VERIFY) {
+            LOGGER.debug("Skip SJH verify for {}", modFile.getFileName());
+            return Status.NONE;
+        }
         final SecureJar secureJar = modFile.getSecureJar();
 
         // reference from net.minecraftforge.fml.loading.moddiscovery.AbstractJarFileModProvider
@@ -44,7 +53,19 @@ public final class IntegrityVerifier {
             List<Path> extraFiles = new ArrayList<>();
             List<Path> invalidFiles = new ArrayList<>();
 
+            final Manifest rawJarManifest = getJarManifest(modFile.getFilePath());
             final Manifest actualManifestPaths = secureJar.moduleDataProvider().getManifest();
+
+            boolean isSame = rawJarManifest.equals(secureJar.moduleDataProvider().getManifest());
+            if (!isSame) {
+                LOGGER.debug("SJH manifest ({}) is unexpectedly modified, repopulate entries", modFile.getFileName());
+                for (Map.Entry<String, Attributes> entry : rawJarManifest.getEntries().entrySet()) {
+                    String name = entry.getKey(); // per-entry "Name:"
+                    Attributes attributes = entry.getValue();
+                    actualManifestPaths.getEntries().put(name, attributes);
+                }
+            }
+
             final Set<String> manifestPaths = actualManifestPaths.getEntries().keySet();
 
             for (Path path : jarContents) {
@@ -96,6 +117,39 @@ public final class IntegrityVerifier {
             System.out.println("Error while trying to self verify");
             e.printStackTrace();
             return Status.NONE;
+        }
+    }
+
+    static void handleStatus(Status status, IModFile modFile) {
+        if (IntegrityVerifier.SKIP_SJH_VERIFY) {
+            return;
+        }
+        switch (status) {
+            case VERIFIED:
+                if (FMLLoader.isProduction()) {
+                    CodeSigner[] signers = modFile.getSecureJar().getManifestSigners();
+                    boolean match = JarValidator.hasSignersMatch(RestoreChatLinksForge.MOD_SIGNATURE, signers);
+                    if (!match) {
+                        throw new SecurityException("JAR fingerprint not expected");
+                    }
+                }
+                break;
+            case NONE:
+            case INVALID:
+            case UNVERIFIED:
+            default:
+                if (FMLLoader.isProduction()) {
+                    throw new SecurityException("JAR file is tampered! " + modFile.getFileName());
+                } else {
+                    LOGGER.debug("DEV mode, ignoring sign status");
+                }
+                break;
+        }
+    }
+
+    private static Manifest getJarManifest(Path path) throws IOException {
+        try (JarFile jar = new JarFile(path.toFile(), false, ZipFile.OPEN_READ)) {
+            return jar.getManifest();
         }
     }
 }
